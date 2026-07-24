@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "leggio"
+dynamic = ["version"]
+description = "A sheet music viewer for Linux"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "GPL-3.0-or-later"
+
+# Runtime dependencies are all system packages installed via pacman
+# (python-gobject, gtk4, libadwaita, poppler-glib, python-cairo).
+# They are deliberately not listed here: PyGObject introspection bindings
+# cannot be resolved by pip in a way that matches the system GTK build.
+dependencies = []
+
+[project.scripts]
+leggio = "leggio.cli:main"
+
+# The version lives in exactly one place: src/leggio/__init__.py.
+[tool.setuptools.dynamic]
+version = {attr = "leggio.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# The stylesheet is loaded from disk at startup, so it has to ship inside
+# the wheel alongside the modules.
+[tool.setuptools.package-data]
+"leggio.ui" = ["*.css"]
+
+[tool.ruff]
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# Correctness rules, not style churn. pyupgrade (UP) is deliberately absent:
+# it would rewrite ~85 Optional[...] annotations across the codebase, which
+# is risk without benefit - the project targets Python 3.11+, where both
+# spellings are equally valid.
+select = ["E", "F", "W", "I", "B"]
+# E402 (import not at top of file) is unavoidable with GObject
+# introspection: gi.require_version() must run before the gi.repository
+# imports it governs, so those imports are legitimately below code.
+ignore = ["E402"]

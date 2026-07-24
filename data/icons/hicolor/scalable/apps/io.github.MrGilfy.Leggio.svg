@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!--
+    Deliberately flat: solid fills, no gradients, no nested transforms.
+    Qt-based launchers (Quickshell, KDE) render icons through QtSvg, which
+    implements only a subset of SVG and is unreliable with gradients. Raster
+    PNGs are generated from this file at package time for the same reason.
+  -->
+  <rect x="4" y="4" width="120" height="120" rx="27" fill="#1c71d8"/>
+
+  <!-- music stand -->
+  <rect x="60" y="72" width="8" height="30" rx="4" fill="#eaf1fb"/>
+  <path d="M64 98 L40 113 M64 98 L88 113" stroke="#eaf1fb" stroke-width="8"
+        stroke-linecap="round" fill="none"/>
+
+  <!-- the score on it -->
+  <rect x="20" y="20" width="88" height="60" rx="6" fill="#ffffff"/>
+  <g stroke="#3d3846" stroke-width="3" stroke-linecap="round">
+    <path d="M30 32 h68"/>
+    <path d="M30 41 h68"/>
+    <path d="M30 50 h68"/>
+    <path d="M30 59 h68"/>
+    <path d="M30 68 h68"/>
+  </g>
+
+  <!-- a note -->
+  <ellipse cx="52" cy="63" rx="11" ry="8" fill="#1c71d8"/>
+  <rect x="59" y="26" width="5" height="37" fill="#1c71d8"/>
+  <path d="M64 26 h18 v9 h-18 z" fill="#1c71d8"/>
+</svg>

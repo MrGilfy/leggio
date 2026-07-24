@@ -1,0 +1,91 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publish release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install validators
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            desktop-file-utils appstream
+
+      # A tag that disagrees with the version in the source would ship a
+      # package whose AUR pkgver never matches what the app reports.
+      - name: Check the tag matches the source version
+        run: |
+          set -eu
+          tag="${GITHUB_REF_NAME#v}"
+          src="$(make version)"
+          echo "tag=$tag source=$src"
+          if [ "$tag" != "$src" ]; then
+            echo "::error::tag v$tag does not match __version__ $src"
+            exit 1
+          fi
+
+      - name: Check the release is described in the metainfo
+        run: |
+          set -eu
+          version="${GITHUB_REF_NAME#v}"
+          if ! grep -q "<release version=\"$version\"" \
+              data/io.github.MrGilfy.Leggio.metainfo.xml; then
+            echo "::error::no <release version=\"$version\"> in the metainfo"
+            exit 1
+          fi
+
+      - name: Validate metadata
+        run: |
+          desktop-file-validate data/io.github.MrGilfy.Leggio.desktop
+          appstreamcli validate --no-net \
+            data/io.github.MrGilfy.Leggio.metainfo.xml
+
+      # Built the same way GitHub builds its own source archives, so the
+      # checksum below is the one to put in the PKGBUILD.
+      - name: Build the source tarball
+        run: |
+          set -eu
+          version="${GITHUB_REF_NAME#v}"
+          git archive --format=tar.gz \
+            --prefix="leggio-$version/" \
+            -o "leggio-$version.tar.gz" HEAD
+          sha256sum "leggio-$version.tar.gz" | tee sha256.txt
+
+      - name: Summarise for the AUR
+        run: |
+          set -eu
+          version="${GITHUB_REF_NAME#v}"
+          sum="$(cut -d' ' -f1 sha256.txt)"
+          {
+            echo "### AUR update"
+            echo
+            echo "In \`packaging/leggio/PKGBUILD\`:"
+            echo
+            echo '```'
+            echo "pkgver=$version"
+            echo "sha256sums=('$sum')"
+            echo '```'
+            echo
+            echo "This is the checksum of the attached asset, which is"
+            echo "exactly what the PKGBUILD source line points at."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            leggio-*.tar.gz
+            sha256.txt
+          generate_release_notes: true

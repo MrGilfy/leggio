@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 MrGilfy -->
+<component type="desktop-application">
+  <id>io.github.MrGilfy.Leggio</id>
+
+  <name>Leggio</name>
+  <summary>Read sheet music at arm's length</summary>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <developer id="io.github.mrgilfy">
+    <name>MrGilfy</name>
+  </developer>
+
+  <description>
+    <p>
+      Leggio is a sheet music viewer built for the way musicians actually use
+      one: on a stand, at arm's length, with both hands busy and possibly in
+      the middle of a performance.
+    </p>
+    <p>
+      It keeps a library of your PDF scores with titles, composers, tags and
+      setlists, and opens them fullscreen with no chrome in the way. Page
+      turns are instant because the next page is already rendered before you
+      ask for it.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Automatic margin cropping, so the notation fills the screen</li>
+      <li>Half-page turns that show the next system before you commit</li>
+      <li>Turn pages by tap, swipe, keyboard or Bluetooth page-turner pedal</li>
+      <li>Two-page spread on wide screens, single page on tall ones</li>
+      <li>Annotate with pen, highlighter, eraser and 57 musical symbols</li>
+      <li>Setlists that page through several scores as one document</li>
+      <li>Remembers where you stopped reading, per score</li>
+      <li>Keeps the screen awake while a score is open</li>
+    </ul>
+    <p>
+      Your PDF files are never modified. Everything Leggio records lives in
+      its own library database.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.MrGilfy.Leggio.desktop</launchable>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/MrGilfy/leggio/main/data/screenshots/library.png</image>
+      <caption>The score library</caption>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/MrGilfy/leggio</url>
+  <url type="bugtracker">https://github.com/MrGilfy/leggio/issues</url>
+  <url type="vcs-browser">https://github.com/MrGilfy/leggio</url>
+
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+  </categories>
+
+  <keywords>
+    <keyword>sheet music</keyword>
+    <keyword>score</keyword>
+    <keyword>notation</keyword>
+    <keyword>PDF</keyword>
+    <keyword>music stand</keyword>
+  </keywords>
+
+  <provides>
+    <binary>leggio</binary>
+  </provides>
+
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>touch</control>
+  </supports>
+
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.1.0" date="2026-07-24">
+      <description>
+        <p>First release.</p>
+        <ul>
+          <li>Library with search, sorting, tags and setlists</li>
+          <li>Fullscreen viewer with tap, swipe, keyboard and pedal page turns</li>
+          <li>Automatic margin cropping with manual adjustment</li>
+          <li>Half-page turns and automatic two-page spread</li>
+          <li>Annotation with pen, highlighter, eraser and musical symbols</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+</component>

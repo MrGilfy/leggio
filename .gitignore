@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+build/
+dist/
+*.egg-info/
+.ruff_cache/
+# makepkg output
+pkg/
+*.pkg.tar.zst
+
+# makepkg output in packaging/
+packaging/*/src/
+packaging/*/pkg/
+packaging/*/*.tar.gz
+packaging/*/*.pkg.tar.zst

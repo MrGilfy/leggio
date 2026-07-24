@@ -1,0 +1,121 @@
+/* Leggio */
+
+.score-card {
+  padding: 6px;
+  border-radius: 12px;
+}
+
+.score-card:hover {
+  background: alpha(currentColor, 0.06);
+}
+
+.card-thumb {
+  background-color: #ffffff;
+  border-radius: 6px;
+  border: 1px solid alpha(#000000, 0.15);
+}
+
+.card-thumb-placeholder {
+  background-color: alpha(currentColor, 0.05);
+  border-radius: 6px;
+  color: alpha(currentColor, 0.35);
+}
+
+.card-title {
+  font-weight: bold;
+  font-size: 1.15em;
+  margin-top: 4px;
+}
+
+.card-subtitle {
+  font-size: 1em;
+}
+
+.card-badge {
+  background-color: alpha(#000000, 0.65);
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 1px 8px;
+  margin: 6px;
+  font-size: 0.8em;
+}
+
+.card-badge.missing {
+  background-color: @error_color;
+}
+
+.score-card.is-missing .card-thumb,
+.score-card.is-missing .card-title {
+  opacity: 0.45;
+}
+
+/* ---- viewer ---- */
+
+.viewer-overlay {
+  background-color: alpha(#000000, 0.78);
+  border-radius: 18px;
+  padding: 8px 12px;
+  color: #ffffff;
+  box-shadow: 0 2px 12px alpha(#000000, 0.5);
+}
+
+.viewer-button {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 6px;
+  border-radius: 12px;
+  color: #ffffff;
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+.viewer-button:hover {
+  background-color: alpha(#ffffff, 0.16);
+}
+
+.viewer-button:checked {
+  background-color: alpha(#ffffff, 0.3);
+}
+
+.viewer-button:disabled {
+  opacity: 0.4;
+}
+
+.viewer-title {
+  font-size: 1.1em;
+  font-weight: bold;
+  color: #ffffff;
+  margin: 0 8px;
+}
+
+.viewer-page {
+  font-size: 1.1em;
+  font-variant-numeric: tabular-nums;
+  color: alpha(#ffffff, 0.85);
+  margin: 0 12px;
+}
+
+.viewer-overlay separator {
+  background-color: alpha(#ffffff, 0.2);
+  margin: 4px 4px;
+}
+
+.palette-heading {
+  font-size: 0.75em;
+  font-weight: bold;
+  opacity: 0.55;
+  margin: 8px 4px 2px 4px;
+}
+
+.viewer-status {
+  font-size: 1.2em;
+  color: alpha(#ffffff, 0.7);
+}
+
+.sidebar-heading {
+  font-size: 0.82em;
+  font-weight: bold;
+  opacity: 0.6;
+  margin: 12px 12px 2px 12px;
+}
