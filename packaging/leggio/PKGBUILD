@@ -25,7 +25,7 @@ makedepends=()
 # auto-generated archive: the workflow publishes the checksum of this exact
 # file, so there is no ambiguity about which tarball the sum belongs to.
 source=("$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
-sha256sums=('0000000000000000000000000000000000000000000000000000000000000000')
+sha256sums=('bae898b91aafa3e57290da13d52e854e94bf104c8c1452954c1776f08b4485ee')
 
 package() {
   cd "$pkgname-$pkgver"

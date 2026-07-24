@@ -52,15 +52,17 @@ jobs:
           appstreamcli validate --no-net \
             data/io.github.MrGilfy.Leggio.metainfo.xml
 
-      # Built the same way GitHub builds its own source archives, so the
-      # checksum below is the one to put in the PKGBUILD.
+      # Reproducible: gzip -n omits the timestamp and filename that
+      # `git archive --format=tar.gz` would otherwise embed. Without it two
+      # runs of this workflow on the same commit produce different bytes and
+      # therefore different checksums, so a re-run would silently invalidate
+      # the sha256 already pasted into the PKGBUILD.
       - name: Build the source tarball
         run: |
           set -eu
           version="${GITHUB_REF_NAME#v}"
-          git archive --format=tar.gz \
-            --prefix="leggio-$version/" \
-            -o "leggio-$version.tar.gz" HEAD
+          git archive --format=tar --prefix="leggio-$version/" HEAD \
+            | gzip -n -9 > "leggio-$version.tar.gz"
           sha256sum "leggio-$version.tar.gz" | tee sha256.txt
 
       - name: Summarise for the AUR

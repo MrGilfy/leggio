@@ -54,15 +54,21 @@ git push origin main --follow-tags
 tag against `__version__`, builds `leggio-0.2.0.tar.gz`, creates the GitHub
 release, and prints the tarball's sha256 in the job summary.
 
-**6. Update the AUR package** with the version and checksum from that
-summary:
+**6. Update the AUR package.** Set the version, then let `updpkgsums`
+(from `pacman-contrib`) fetch the published tarball and write the checksum
+itself — more reliable than copying it from the job summary:
 
 ```sh
 cd packaging/leggio
-$EDITOR PKGBUILD                   # pkgver=0.2.0, sha256sums=('...')
+$EDITOR PKGBUILD                   # pkgver=0.2.0
+updpkgsums                         # downloads the release, fills in sha256sums
 makepkg --printsrcinfo > .SRCINFO
 makepkg -f                         # must build against the real tarball
 ```
+
+The workflow also prints the checksum in its job summary; either source is
+fine, but `updpkgsums` hashes whatever is actually published, so it cannot
+disagree with reality.
 
 Commit both files to this repository, then copy them to the AUR clone as
 described in [SUBMITTING.md](SUBMITTING.md).
