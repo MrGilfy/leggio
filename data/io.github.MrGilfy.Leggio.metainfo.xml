@@ -4,7 +4,7 @@
   <id>io.github.MrGilfy.Leggio</id>
 
   <name>Leggio</name>
-  <summary>Read sheet music at arm's length</summary>
+  <summary>Read sheet music PDFs from a screen on your music stand</summary>
 
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
@@ -15,30 +15,28 @@
 
   <description>
     <p>
-      Leggio is a sheet music viewer built for the way musicians actually use
-      one: on a stand, at arm's length, with both hands busy and possibly in
-      the middle of a performance.
+      Leggio shows your sheet music PDFs on screen, so you can put a laptop
+      or tablet on a music stand and play from it instead of from paper.
     </p>
     <p>
-      It keeps a library of your PDF scores with titles, composers, tags and
-      setlists, and opens them fullscreen with no chrome in the way. Page
-      turns are instant because the next page is already rendered before you
-      ask for it.
+      It keeps a library of your scores, which you can search by title,
+      composer or tag and group into setlists. Scores open fullscreen with
+      nothing else in the way, and pages turn instantly.
     </p>
-    <p>Features:</p>
+    <p>What it does:</p>
     <ul>
-      <li>Automatic margin cropping, so the notation fills the screen</li>
-      <li>Half-page turns that show the next system before you commit</li>
+      <li>Cuts off the white margins, so the notes fill the screen</li>
+      <li>Half-page turns, so you can see what is coming next</li>
       <li>Turn pages by tap, swipe, keyboard or Bluetooth page-turner pedal</li>
-      <li>Two-page spread on wide screens, single page on tall ones</li>
-      <li>Annotate with pen, highlighter, eraser and 57 musical symbols</li>
-      <li>Setlists that page through several scores as one document</li>
-      <li>Remembers where you stopped reading, per score</li>
-      <li>Keeps the screen awake while a score is open</li>
+      <li>Two pages side by side on a wide screen, one page on a tall one</li>
+      <li>Draw on a score with a pen, highlighter, eraser and musical symbols</li>
+      <li>A setlist reads as one long document, several scores in a row</li>
+      <li>Remembers where you stopped in each score</li>
+      <li>Keeps the screen from going to sleep while you play</li>
     </ul>
     <p>
-      Your PDF files are never modified. Everything Leggio records lives in
-      its own library database.
+      Your PDF files are never changed. Everything Leggio saves is kept in
+      its own library.
     </p>
   </description>
 

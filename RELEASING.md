@@ -1,23 +1,19 @@
 # Making a release
 
-The version lives in exactly one place — `src/leggio/__init__.py`. Every
-other file either reads it from there (`pyproject.toml`, the `Makefile`) or
-is updated by this checklist (the metainfo, the PKGBUILD).
+The version number is written in one file only: `src/leggio/__init__.py`.
+Everything else either reads it from there or is updated by the steps
+below.
 
-Two automated guards will fail the release if you skip a step: the tag must
-match `__version__`, and the metainfo must describe the version being
-tagged.
+## Steps
 
-## Checklist
-
-**1. Bump the version.**
+**1. Change the version.**
 
 ```sh
 $EDITOR src/leggio/__init__.py     # __version__ = "0.2.0"
-make version                       # confirm it reads back
+make version                       # check it reads back correctly
 ```
 
-**2. Add the release to the metainfo.** A new `<release>` at the *top* of
+**2. Write the release notes.** Add a new `<release>` block at the top of
 `<releases>` in `data/io.github.MrGilfy.Leggio.metainfo.xml`:
 
 ```xml
@@ -25,24 +21,24 @@ make version                       # confirm it reads back
   <description>
     <p>What changed, in a sentence.</p>
     <ul>
-      <li>A user-visible change</li>
+      <li>Something users will notice</li>
     </ul>
   </description>
 </release>
 ```
 
-Use the real date in `YYYY-MM-DD`. Release notes are read by software
-centres, so write them for users, not as a commit log.
+Use a real date in `YYYY-MM-DD` form. App stores show these notes to
+users, so write them for users and not as a list of commits.
 
-**3. Check locally.**
+**3. Test it.**
 
 ```sh
-make check                         # desktop entry, AppStream, byte-compile
+make check                         # checks the desktop and AppStream files
 ruff check src tests
 python tests/smoke.py              # needs a display
 ```
 
-**4. Commit and tag.** The tag must be `v` plus the exact version.
+**4. Commit and tag.** The tag is `v` plus the exact version.
 
 ```sh
 git commit -am "Release 0.2.0"
@@ -50,48 +46,42 @@ git tag -a v0.2.0 -m "Leggio 0.2.0"
 git push origin main --follow-tags
 ```
 
-**5. Wait for the release workflow.** It validates the metadata, checks the
-tag against `__version__`, builds `leggio-0.2.0.tar.gz`, creates the GitHub
-release, and prints the tarball's sha256 in the job summary.
+**5. Wait for GitHub Actions.** It checks the tag matches the version,
+builds `leggio-0.2.0.tar.gz`, creates the GitHub release, and prints the
+tarball's sha256 in the job summary.
 
-**6. Update the AUR package.** Set the version, then let `updpkgsums`
-(from `pacman-contrib`) fetch the published tarball and write the checksum
-itself — more reliable than copying it from the job summary:
+**6. Update the AUR package.**
 
 ```sh
 cd packaging/leggio
 $EDITOR PKGBUILD                   # pkgver=0.2.0
-updpkgsums                         # downloads the release, fills in sha256sums
+updpkgsums                         # downloads the release and fills in the checksum
 makepkg --printsrcinfo > .SRCINFO
-makepkg -f                         # must build against the real tarball
+makepkg -f                         # must build
 ```
 
-The workflow also prints the checksum in its job summary; either source is
-fine, but `updpkgsums` hashes whatever is actually published, so it cannot
-disagree with reality.
+`updpkgsums` comes from `pacman-contrib`. Commit both files here, then
+copy them to the AUR as described in [SUBMITTING.md](SUBMITTING.md).
 
-Commit both files to this repository, then copy them to the AUR clone as
-described in [SUBMITTING.md](SUBMITTING.md).
+`leggio-git` needs nothing — it follows the branch and works out its own
+version at build time.
 
-`leggio-git` needs nothing: it tracks the branch head and recomputes its
-own `pkgver` at build time.
-
-**7. Confirm.**
+**7. Check it worked.**
 
 ```sh
-pacman -Sy leggio          # or: paru -S leggio
-leggio --help 2>/dev/null || leggio
+paru -S leggio
+leggio
 ```
 
-## If the release workflow fails
+## If the release fails
 
-| Failure | Cause |
+| Error | Reason |
 |---|---|
 | `tag vX does not match __version__` | Step 1 was skipped, or the tag has a typo |
 | `no <release version="X">` in the metainfo | Step 2 was skipped |
-| AppStream validation failed | Malformed `<release>` block — run `make check` |
+| AppStream validation failed | The `<release>` block is malformed — run `make check` |
 
-Delete the tag, fix, and re-tag:
+Delete the tag, fix the problem, and tag again:
 
 ```sh
 git tag -d v0.2.0

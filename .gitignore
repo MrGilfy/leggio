@@ -4,6 +4,8 @@ build/
 dist/
 *.egg-info/
 .ruff_cache/
+.claude/settings.local.json
+
 # makepkg output
 pkg/
 *.pkg.tar.zst

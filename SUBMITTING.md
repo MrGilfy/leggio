@@ -1,20 +1,19 @@
 # Publishing to the AUR
 
-The two packages live in `packaging/` in this repository, which is where
-they are edited. The AUR itself is a separate git repository per package,
-and only ever contains two files. Nothing in this repository is pushed to
-the AUR directly — the files are copied across.
+Leggio has two AUR packages. They are edited here in `packaging/`, and
+then copied into the AUR, which is a separate git repository for each
+package. Nothing is pushed to the AUR from this repository directly.
 
-| This repository | AUR repository |
+| Here | AUR |
 |---|---|
 | `packaging/leggio/` | `ssh://aur@aur.archlinux.org/leggio.git` |
 | `packaging/leggio-git/` | `ssh://aur@aur.archlinux.org/leggio-git.git` |
 
-## One-time setup
+## Setting up (once)
 
-**1. Create an AUR account** at <https://aur.archlinux.org/register>.
+**1. Make an AUR account** at <https://aur.archlinux.org/register>.
 
-**2. Add an SSH key.** The AUR only accepts SSH, never HTTPS:
+**2. Make an SSH key.** The AUR only accepts SSH:
 
 ```sh
 ssh-keygen -t ed25519 -f ~/.ssh/aur -C "aur"
@@ -23,7 +22,7 @@ cat ~/.ssh/aur.pub
 
 Paste the public key into *My Account → SSH Public Key* on the AUR site.
 
-**3. Tell SSH to use that key for the AUR** — add to `~/.ssh/config`:
+**3. Tell SSH to use that key.** Add this to `~/.ssh/config`:
 
 ```
 Host aur.archlinux.org
@@ -38,12 +37,12 @@ Host aur.archlinux.org
 ssh aur@aur.archlinux.org help
 ```
 
-You should get a list of commands, not a password prompt.
+You should see a list of commands, not a password prompt.
 
-## Publishing a package for the first time
+## Publishing a package the first time
 
-The AUR creates the repository on first push; there is nothing to create
-on the website.
+The AUR creates the repository when you first push, so there is nothing
+to set up on the website.
 
 ```sh
 git clone ssh://aur@aur.archlinux.org/leggio.git aur-leggio
@@ -55,11 +54,11 @@ git commit -m "Initial import: leggio 0.1.0"
 git push origin master
 ```
 
-Repeat with `leggio-git`, whose repository is `leggio-git.git`.
+Do the same for `leggio-git`, using `leggio-git.git`.
 
-> The AUR's default branch is **`master`**, not `main`.
+> The AUR's main branch is called **`master`**, not `main`.
 
-## Updating an existing package
+## Updating a package
 
 ```sh
 cd aur-leggio
@@ -69,24 +68,23 @@ git commit -am "Update to 0.2.0"
 git push
 ```
 
-`leggio-git` normally needs no update when a release is tagged: it builds
-from the branch head and its `pkgver()` recalculates on every build. Push
-it only when the PKGBUILD itself changes — a new dependency, say.
+`leggio-git` usually doesn't need updating for a new release — it builds
+from the latest code and works out its own version. Only push it when the
+PKGBUILD itself changes, for example when a dependency is added.
 
-## What must be committed
+## What goes in the AUR repository
 
-**Only `PKGBUILD` and `.SRCINFO`.** The AUR rejects a push whose `.SRCINFO`
-disagrees with its `PKGBUILD`, so regenerate it whenever the PKGBUILD
-changes:
+**Only `PKGBUILD` and `.SRCINFO`.** The AUR rejects a push where the two
+disagree, so regenerate `.SRCINFO` whenever you edit the PKGBUILD:
 
 ```sh
 cd packaging/leggio
 makepkg --printsrcinfo > .SRCINFO
 ```
 
-Do **not** commit built packages (`*.pkg.tar.zst`), the `src/` or `pkg/`
-directories makepkg leaves behind, or downloaded tarballs. A `.gitignore`
-inside the AUR clone is a convenient guard:
+Don't commit built packages (`*.pkg.tar.zst`), the `src/` and `pkg/`
+folders makepkg leaves behind, or downloaded tarballs. A `.gitignore`
+inside the AUR clone helps:
 
 ```
 *
@@ -100,11 +98,11 @@ inside the AUR clone is a convenient guard:
 cd packaging/leggio
 makepkg --printsrcinfo > .SRCINFO   # keep it in step with the PKGBUILD
 makepkg -f                          # must build cleanly
-namcap PKGBUILD                     # packaging lint
-namcap leggio-*.pkg.tar.zst         # built-package lint
+namcap PKGBUILD                     # checks the PKGBUILD
+namcap leggio-*.pkg.tar.zst         # checks the built package
 ```
 
-`namcap` comes from the `namcap` package. If you have `devtools` installed,
-`extra-x86_64-build` builds in a clean chroot, which catches dependencies
-that only work because they happen to be installed on your machine — worth
-doing before a first import.
+`namcap` is in the `namcap` package. If you have `devtools`,
+`extra-x86_64-build` builds in a clean container, which catches missing
+dependencies that only work because they happen to be installed on your
+machine. Worth doing before a first import.
