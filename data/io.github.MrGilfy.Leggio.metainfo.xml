@@ -84,6 +84,18 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.3.0" date="2026-11-02">
+      <description>
+        <p>Jump links, bookmarks with a page overview, and PDF export with your annotations.</p>
+        <ul>
+          <li>Jump links: tap a D.S., D.C., To Coda or repeat sign to jump to its target, then Back to return; J and B do the same from the keyboard</li>
+          <li>Bookmarks and a page overview with thumbnails, for finding your way around long scores</li>
+          <li>Export a score or a whole setlist as a PDF with your annotations drawn in; the original PDF stays untouched</li>
+          <li>Black is now the default pen colour</li>
+          <li>Clear now clears every page on screen, including the right-hand page of a spread</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-11-02">
       <description>
         <p>Night mode, a Flatpak bundle, and a screen that stays awake on more desktops.</p>

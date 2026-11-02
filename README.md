@@ -55,11 +55,10 @@ sudo make install PREFIX=/usr
 | Previous page | Tap left third, swipe right | `←` `Backspace` `PageUp` |
 | Show or hide controls | Tap the centre | `M` |
 | Zoom | Pinch | `+` `-` `0` |
-| Draw, crop, rotate | Buttons in the top bar | `A` `C` `R` |
+| Draw, crop, rotate, export a PDF | Buttons in the top bar | `A` `C` `R` `E` |
 | Half-page turns, night mode | Buttons in the top bar | `H` `N` |
 | Follow a jump link, then go back | Tap its marker, then Back | `J` `B` |
 | Pages and bookmarks, add a bookmark | Grid button in the top bar | `G` `K` |
-| Export a PDF with your annotations | Export button in the top bar | `E` |
 | Back to the library | Back button | `Esc` |
 
 Maintainers: see [docs/MAINTAINING.md](docs/MAINTAINING.md).
