@@ -12,9 +12,7 @@ pkg/
 
 # makepkg output in packaging/
 packaging/*/src/
-packaging/*/pkg/
 packaging/*/*.tar.gz
-packaging/*/*.pkg.tar.zst
 
 # flatpak-builder output (make flatpak, CI)
 .flatpak-builder/
