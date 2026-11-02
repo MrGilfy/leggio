@@ -57,6 +57,7 @@ sudo make install PREFIX=/usr
 | Zoom | Pinch | `+` `-` `0` |
 | Draw, crop, rotate | Buttons in the top bar | `A` `C` `R` |
 | Half-page turns, night mode | Buttons in the top bar | `H` `N` |
+| Follow a jump link, then go back | Tap its marker, then Back | `J` `B` |
 | Back to the library | Back button | `Esc` |
 
 Maintainers: see [docs/MAINTAINING.md](docs/MAINTAINING.md).

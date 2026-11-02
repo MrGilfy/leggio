@@ -170,6 +170,7 @@ class AnnotateBar(Gtk.Box):
             ("pen", "leggio-annotate-symbolic", "Pen"),
             ("highlighter", None, "Highlighter"),
             ("eraser", None, "Eraser — removes a whole stroke"),
+            ("link", None, "Jump link — tap the source, then the target (L)"),
         ):
             button = Gtk.ToggleButton()
             if icon is not None:
@@ -341,8 +342,8 @@ class AnnotateBar(Gtk.Box):
             self.color_buttons[color].set_active(True)
         if width in self.width_buttons:
             self.width_buttons[width].set_active(True)
-        # Colour and width are meaningless for the eraser.
-        drawing = tool != "eraser"
+        # Colour and width are meaningless for the eraser and for links.
+        drawing = tool not in ("eraser", "link")
         for button in self.color_buttons.values():
             button.set_sensitive(drawing)
         for button in self.width_buttons.values():

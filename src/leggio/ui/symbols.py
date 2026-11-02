@@ -607,7 +607,34 @@ def draw_highlighter(ctx, cx: float, cy: float, size: float) -> None:
     ctx.restore()
 
 
-TOOL_ICONS = {"eraser": draw_eraser, "highlighter": draw_highlighter}
+def draw_jump_arrow(ctx, cx: float, cy: float, size: float,
+                    forward: bool = True) -> None:
+    """A curved arrow, like a jump in the score: the link tool's icon and
+    the marker a link shows on the page. Mirrored for a jump back."""
+    ctx.save()
+    ctx.translate(cx, cy)
+    if not forward:
+        ctx.scale(-1, 1)
+    radius = size * 0.3
+    base = size * 0.12
+    ctx.set_line_width(max(size * 0.1, 1.0))
+    ctx.set_line_cap(cairo.LineCap.ROUND)
+    ctx.arc(0, base, radius, math.pi, 2 * math.pi)
+    ctx.stroke()
+    head = size * 0.3
+    ctx.move_to(radius, base + head * 0.6)
+    ctx.line_to(radius - head * 0.55, base - head * 0.3)
+    ctx.line_to(radius + head * 0.55, base - head * 0.3)
+    ctx.close_path()
+    ctx.fill()
+    ctx.restore()
+
+
+TOOL_ICONS = {
+    "eraser": draw_eraser,
+    "highlighter": draw_highlighter,
+    "link": draw_jump_arrow,
+}
 
 
 def draw_tool_icon(ctx, tool: str, cx: float, cy: float, size: float) -> None:

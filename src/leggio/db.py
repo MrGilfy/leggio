@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS annotations (
   id       INTEGER PRIMARY KEY,
   score_id INTEGER NOT NULL REFERENCES scores(id) ON DELETE CASCADE,
   page     INTEGER NOT NULL,
-  kind     TEXT    NOT NULL,   -- 'ink' | 'symbol'
+  kind     TEXT    NOT NULL,   -- 'ink' | 'symbol' | 'link'
   color    TEXT    NOT NULL,   -- #rrggbb or #rrggbbaa
   width    REAL    NOT NULL,   -- stroke width as a fraction of page width
   data     TEXT    NOT NULL,   -- JSON payload, see models.Annotation
@@ -380,6 +380,16 @@ class Database:
                 "SELECT * FROM annotations WHERE score_id = ? AND page = ? "
                 "ORDER BY id",
                 (score_id, page),
+            ).fetchall()
+            return [Annotation.from_row(r) for r in rows]
+
+    def links_for(self, score_id: int) -> list[Annotation]:
+        """Every jump link in a score, whichever page it starts on."""
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM annotations WHERE score_id = ? AND kind = ? "
+                "ORDER BY page, id",
+                (score_id, Annotation.LINK),
             ).fetchall()
             return [Annotation.from_row(r) for r in rows]
 
