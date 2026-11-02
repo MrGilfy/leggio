@@ -35,6 +35,20 @@ home, run:
 flatpak override --user --filesystem=/path:ro io.github.mrgilfy.leggio
 ```
 
+Upgrading the Flatpak from 0.3.0 or older: the app ID changed from
+`io.github.MrGilfy.Leggio` to `io.github.mrgilfy.leggio`, and Flatpak does
+not carry your library over. Move it once, before you first start the new
+version:
+
+```sh
+mv ~/.var/app/io.github.MrGilfy.Leggio ~/.var/app/io.github.mrgilfy.leggio
+flatpak uninstall io.github.MrGilfy.Leggio
+```
+
+If the new version has already run, it made an empty library: delete
+`~/.var/app/io.github.mrgilfy.leggio` first, unless you have added scores
+to it since.
+
 **From source.** Install Python 3.11+, PyGObject, pycairo, GTK 4,
 libadwaita and poppler-glib, then:
 
