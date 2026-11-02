@@ -7,7 +7,7 @@ last_page/last_offset store. A half-page turn adds 0.5, showing the bottom
 of one page above the top of the next.
 
 Annotation and crop editing live in annotate_mode.py and crop_mode.py,
-jump links in link_mode.py.
+jump links in link_mode.py, the page overview and bookmarks in overview.py.
 """
 
 from __future__ import annotations
@@ -23,12 +23,14 @@ gi.require_version("Adw", "1")
 import cairo  # noqa: E402
 from gi.repository import Adw, Gdk, GLib, Gtk  # noqa: E402
 
+from .. import geometry
 from ..models import CropRect, Score
 from ..render import PRIORITY_PREFETCH, make_key
 from .annotate_mode import AnnotateModeMixin
 from .controls import AnnotateBar, ControlBar, CropBar
 from .crop_mode import CropModeMixin
 from .link_mode import LinkModeMixin
+from .overview import OverviewMixin
 
 log = logging.getLogger(__name__)
 
@@ -47,7 +49,7 @@ def _normalise_fit(value: object) -> str:
 
 
 class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
-                 Adw.NavigationPage):
+                 OverviewMixin, Adw.NavigationPage):
     """One score, or a setlist paged through end to end."""
 
     __gtype_name__ = "LeggioViewerPage"
@@ -148,6 +150,7 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
         overlay.add_overlay(self.overlay_revealer)
         for widget in self._build_link_widgets():
             overlay.add_overlay(widget)
+        overlay.add_overlay(self._build_overview())
 
         self.set_child(overlay)
 
@@ -213,6 +216,7 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
                 GLib.source_remove(source)
         self._resize_source = self._overlay_source = 0
         self._stop_flash()
+        self.close_overview()
 
     def close_viewer(self) -> None:
         self.ctx.navigation.pop()
@@ -300,14 +304,8 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
         info = self._info()
         if info is None or not (0 <= page < len(info.page_sizes)):
             return (595.0, 842.0)
-        page_w, page_h = info.page_sizes[page]
         box = self.crop if (self.crop and not self.crop_mode) else None
-        if box:
-            page_w *= box.width
-            page_h *= box.height
-        if self.rotation in (90, 270):
-            page_w, page_h = page_h, page_w
-        return (max(page_w, 1.0), max(page_h, 1.0))
+        return geometry.content_size(info.page_sizes[page], box, self.rotation)
 
     def _scale(self, width: float, height: float) -> float:
         content_w, content_h = self._content_size(self.page)
@@ -723,6 +721,16 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
         if state & Gdk.ModifierType.ALT_MASK:
             return False
 
+        if self.overview_open:
+            # Arrows and Enter belong to the page grid while it is open.
+            if keyval in (Gdk.KEY_Escape, Gdk.KEY_g, Gdk.KEY_G):
+                self.close_overview()
+                return True
+            if keyval in (Gdk.KEY_k, Gdk.KEY_K):
+                self.add_bookmark_here()
+                return True
+            return False
+
         if self.annotate_mode:
             return self._annotate_key(keyval)
 
@@ -792,6 +800,12 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
             return True
         if keyval in (Gdk.KEY_b, Gdk.KEY_B):
             self.jump_back()
+            return True
+        if keyval in (Gdk.KEY_g, Gdk.KEY_G):
+            self.open_overview()
+            return True
+        if keyval in (Gdk.KEY_k, Gdk.KEY_K):
+            self.add_bookmark_here()
             return True
         return False
 

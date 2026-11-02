@@ -168,6 +168,36 @@ class Annotation:
 
 
 @dataclass
+class Bookmark:
+    """A named place in a score: "Trio", "2nd movement", "Letter B".
+
+    (x, y) is in page space like annotations: the point that was at the top
+    of the screen when the bookmark was added, so it survives crop and
+    rotation and lands the same way a jump link's target does.
+    """
+
+    id: int
+    score_id: int
+    name: str
+    page: int
+    x: float = 0.5
+    y: float = 0.0
+    created: float = 0.0
+
+    @classmethod
+    def from_row(cls, row: Any) -> "Bookmark":
+        return cls(
+            id=row["id"],
+            score_id=row["score_id"],
+            name=row["name"],
+            page=row["page"],
+            x=row["x"],
+            y=row["y"],
+            created=row["created"],
+        )
+
+
+@dataclass
 class Setlist:
     id: int
     name: str

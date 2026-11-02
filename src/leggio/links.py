@@ -95,24 +95,45 @@ def display_fraction(u: float, v: float, rotation: int,
     return _clamp((b - box.y0) / max(box.height, 1e-9))
 
 
+def top_point(offset: float, rotation: int,
+              crop: Optional[CropRect]) -> tuple[float, float]:
+    """The page-space point at the top centre of the screen when a page is
+    scrolled by `offset` (a fraction of its drawn height): the reverse of
+    display_fraction, used to remember a position as a bookmark."""
+    box = geometry.rotate_rect(crop or geometry.FULL_PAGE, rotation)
+    a = box.x0 + box.width / 2
+    b = box.y0 + _clamp(offset) * box.height
+    u, v = geometry.unrotate_point(a, b, rotation)
+    return (_clamp(u), _clamp(v))
+
+
+def land(target_page: int, tx: float, ty: float, view: str, *,
+         rotation: int, crop: Optional[CropRect], current_page: int = 0,
+         margin: float = 0.0) -> tuple[int, float]:
+    """Where to put the viewer, as (page, offset), to show a page-space spot.
+
+    view is "top" for half-page and fit-to-width views, where the spot is
+    scrolled to the top of the screen with `margin` (a fraction of the page
+    height) above it; "page" for the whole-page view, which shows the page
+    whole; and "spread", which shows the spread holding the page while
+    keeping the current pairing of left and right pages. Jump links and
+    bookmarks both land through here.
+    """
+    if view == "top":
+        offset = display_fraction(tx, ty, rotation, crop) - margin
+        return (target_page, min(max(offset, 0.0), 0.999))
+    if view == "spread":
+        parity = (target_page - current_page) % 2
+        return (max(target_page - parity, 0), 0.0)
+    return (target_page, 0.0)
+
+
 def landing(link: Link, view: str, *, rotation: int,
             crop: Optional[CropRect], current_page: int = 0,
             margin: float = 0.0) -> tuple[int, float]:
-    """Where to put the viewer, as (page, offset), to show a link's target.
-
-    view is "top" for half-page and fit-to-width views, where the target is
-    scrolled to the top of the screen with `margin` (a fraction of the page
-    height) above it; "page" for the whole-page view, which shows the target
-    page whole; and "spread", which shows the spread holding the target
-    while keeping the current pairing of left and right pages.
-    """
-    if view == "top":
-        offset = display_fraction(link.tx, link.ty, rotation, crop) - margin
-        return (link.target_page, min(max(offset, 0.0), 0.999))
-    if view == "spread":
-        parity = (link.target_page - current_page) % 2
-        return (max(link.target_page - parity, 0), 0.0)
-    return (link.target_page, 0.0)
+    """Where a jump link lands; see land()."""
+    return land(link.target_page, link.tx, link.ty, view, rotation=rotation,
+                crop=crop, current_page=current_page, margin=margin)
 
 
 # --------------------------------------------------------- picking on screen

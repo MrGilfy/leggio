@@ -251,33 +251,46 @@ class LinkModeMixin:
         return "page"
 
     def follow_link(self, link: links.Link) -> None:
+        self.go_to(link.target_page, link.tx, link.ty, flash=True)
+
+    def go_to(self, page: int, tx: Optional[float] = None,
+              ty: Optional[float] = None, flash: bool = False,
+              index: Optional[int] = None) -> None:
+        """Jump to a page-space spot, the way every jump lands, and offer
+        Back to where it started. Without a spot, go to the top of the page.
+        `index` switches score in a setlist."""
+        before = (self.index, self.page, self.offset)
+        if index is not None and index != self.index and 0 <= index < len(self.scores):
+            self._switch_score(index)
+        if tx is None or ty is None:
+            tx, ty = links.top_point(0.0, self.rotation, self.crop)
+
         width, height = self._device_size()
         view = self._landing_view()
         scale = self._scale(width, height)
-        _cw, content_h = self._content_size(link.target_page)
+        _cw, content_h = self._content_size(page)
         page_h = content_h * scale
         margin = links.TOP_MARGIN * height / page_h if page_h > 0 else 0.0
 
-        before = (self.index, self.page, self.offset)
-        page, offset = links.landing(
-            link, view, rotation=self.rotation, crop=self.crop,
+        landed, offset = links.land(
+            page, tx, ty, view, rotation=self.rotation, crop=self.crop,
             current_page=self.page, margin=margin,
         )
         count = self._page_count()
         if count:
-            page = min(page, count - 1)
-        if page == count - 1 and page_h > height:
+            landed = min(landed, count - 1)
+        if landed == count - 1 and page_h > height:
             # Never scroll the last page's bottom edge up off the screen.
             offset = min(offset, 1.0 - height / page_h)
 
-        self.page, self.offset = page, max(offset, 0.0)
+        self.page, self.offset = landed, max(offset, 0.0)
         self.pan_x = 0.0
         self.back_state.jumped(before)
 
         self._stop_flash()
-        self._flash = (self.score.id, link.target_page, link.tx, link.ty,
-                       time.monotonic())
-        self._flash_source = GLib.timeout_add(33, self._tick_flash)
+        if flash:
+            self._flash = (self.score.id, page, tx, ty, time.monotonic())
+            self._flash_source = GLib.timeout_add(33, self._tick_flash)
         self._after_jump()
 
     def jump_back(self) -> None:

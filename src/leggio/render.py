@@ -36,6 +36,7 @@ MAX_OPEN_DOCUMENTS = 4
 PRIORITY_INFO = 0
 PRIORITY_VISIBLE = 1
 PRIORITY_PREFETCH = 2
+PRIORITY_THUMBNAIL = 3    # page overview: behind everything the score needs
 
 
 @dataclass(frozen=True)

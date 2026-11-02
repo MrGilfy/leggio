@@ -8,6 +8,7 @@ import itertools
 import pytest
 
 from leggio.geometry import (
+    content_size,
     page_to_screen,
     page_unit,
     rotate_point,
@@ -111,3 +112,11 @@ def test_page_unit_scales_with_crop_width():
     assert page_unit(300.0, 90, CropRect(0.0, 0.0, 1.0, 0.5)) == pytest.approx(
         600.0
     )
+
+
+def test_content_size_crops_then_rotates():
+    crop = CropRect(0.0, 0.0, 0.5, 0.25)
+    assert content_size((600.0, 800.0), None, 0) == (600.0, 800.0)
+    assert content_size((600.0, 800.0), crop, 0) == (300.0, 200.0)
+    assert content_size((600.0, 800.0), crop, 90) == (200.0, 300.0)
+    assert content_size((600.0, 800.0), crop, 270) == (200.0, 300.0)

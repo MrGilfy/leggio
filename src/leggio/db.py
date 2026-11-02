@@ -16,11 +16,11 @@ import time
 from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
-from .models import Annotation, CropRect, Score, Setlist
+from .models import Annotation, Bookmark, CropRect, Score, Setlist
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS scores (
@@ -93,6 +93,20 @@ CREATE TABLE IF NOT EXISTS annotations (
   created  REAL    NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_annotations ON annotations(score_id, page);
+
+-- Named places in a score (schema 4). Not annotations: they are not drawn
+-- on the page, and clearing a page's ink must not remove them. (x, y) is
+-- in page space, the point at the top of the screen when it was added.
+CREATE TABLE IF NOT EXISTS bookmarks (
+  id       INTEGER PRIMARY KEY,
+  score_id INTEGER NOT NULL REFERENCES scores(id) ON DELETE CASCADE,
+  name     TEXT    NOT NULL,
+  page     INTEGER NOT NULL,
+  x        REAL    NOT NULL,
+  y        REAL    NOT NULL,
+  created  REAL    NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_bookmarks ON bookmarks(score_id, page);
 """
 
 # The only columns update_score() may set by name; keeps its dynamic SQL safe.
@@ -412,6 +426,55 @@ class Database:
             )
             self._conn.commit()
             return int(cursor.lastrowid)
+
+    # ------------------------------------------------------------ bookmarks
+
+    def bookmarks_for(self, score_id: int) -> list[Bookmark]:
+        """A score's bookmarks in the order they come in the music."""
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT * FROM bookmarks WHERE score_id = ? "
+                "ORDER BY page, y, id",
+                (score_id,),
+            ).fetchall()
+            return [Bookmark.from_row(r) for r in rows]
+
+    def add_bookmark(self, bookmark: Bookmark) -> int:
+        name = bookmark.name.strip()
+        if not name:
+            raise ValueError("a bookmark needs a name")
+        with self._lock:
+            cursor = self._conn.execute(
+                "INSERT INTO bookmarks (score_id, name, page, x, y, created) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (bookmark.score_id, name, bookmark.page,
+                 min(max(bookmark.x, 0.0), 1.0), min(max(bookmark.y, 0.0), 1.0),
+                 bookmark.created),
+            )
+            self._conn.commit()
+            return int(cursor.lastrowid)
+
+    def rename_bookmark(self, bookmark_id: int, name: str) -> None:
+        name = name.strip()
+        if not name:
+            raise ValueError("a bookmark needs a name")
+        with self._lock:
+            self._conn.execute(
+                "UPDATE bookmarks SET name = ? WHERE id = ?", (name, bookmark_id)
+            )
+            self._conn.commit()
+
+    def delete_bookmark(self, bookmark_id: int) -> Optional[Bookmark]:
+        """Remove a bookmark, returning it so the delete can be undone."""
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT * FROM bookmarks WHERE id = ?", (bookmark_id,)
+            ).fetchone()
+            if row is None:
+                return None
+            self._conn.execute("DELETE FROM bookmarks WHERE id = ?", (bookmark_id,))
+            self._conn.commit()
+            return Bookmark.from_row(row)
 
     def delete_annotations(self, ids: Sequence[int]) -> None:
         if not ids:
