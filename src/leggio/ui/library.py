@@ -28,6 +28,7 @@ class LibraryPage(Adw.NavigationPage):
         super().__init__(title="Leggio")
         self.ctx = ctx
         self.store = LibraryStore()
+        self._last_scan_toast: Optional[Adw.Toast] = None
         self._context_popover: Optional[Gtk.PopoverMenu] = None
         self._context_score: Optional[Score] = None
         self._setlist_popover: Optional[Gtk.PopoverMenu] = None
@@ -535,7 +536,7 @@ class LibraryPage(Adw.NavigationPage):
     def start_scan(self) -> None:
         directories = self.ctx.config.directories
         if not directories:
-            self.ctx.toast("No library folders configured")
+            self._scan_toast("No library folders configured")
             return
         started = self.ctx.scanner.start(
             directories,
@@ -547,7 +548,7 @@ class LibraryPage(Adw.NavigationPage):
             self.progress.set_fraction(0.0)
             self.progress_revealer.set_reveal_child(True)
         else:
-            self.ctx.toast("A scan is already running")
+            self._scan_toast("A scan is already running")
 
     def _on_scan_progress(self, done: int, total: int, name: str) -> None:
         if total:
@@ -559,7 +560,7 @@ class LibraryPage(Adw.NavigationPage):
         self.reload()
 
         if result.cancelled:
-            self.ctx.toast("Scan cancelled")
+            self._scan_toast("Scan cancelled")
             return
 
         parts = []
@@ -573,4 +574,16 @@ class LibraryPage(Adw.NavigationPage):
             parts.append(f"{len(result.unreadable)} unreadable")
         if not parts:
             parts.append(f"{result.found} scores, nothing changed")
-        self.ctx.toast("Scan complete — " + ", ".join(parts))
+        self._scan_toast("Scan complete — " + ", ".join(parts))
+
+    def _scan_toast(self, message: str) -> None:
+        # Scans run in the background; their news never covers a score.
+        if self.ctx.viewer_open:
+            return
+        self.dismiss_scan_toast()
+        self._last_scan_toast = self.ctx.toast(message)
+
+    def dismiss_scan_toast(self) -> None:
+        if self._last_scan_toast is not None:
+            self._last_scan_toast.dismiss()
+            self._last_scan_toast = None

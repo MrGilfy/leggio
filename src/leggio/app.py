@@ -66,8 +66,12 @@ class AppContext:
     def inhibitor(self) -> IdleInhibitor:
         return self.window.inhibitor
 
-    def toast(self, message: str) -> None:
-        self.window.toast(message)
+    @property
+    def viewer_open(self) -> bool:
+        return self.window.viewer_open
+
+    def toast(self, message: str) -> Adw.Toast:
+        return self.window.toast(message)
 
     def open_score(self, score: Score) -> None:
         self.window.open_score(score)
@@ -135,8 +139,19 @@ class LeggioWindow(Adw.ApplicationWindow):
 
         self.connect("close-request", self._on_close)
 
-    def toast(self, message: str) -> None:
-        self.toasts.add_toast(Adw.Toast.new(message))
+    @property
+    def viewer_open(self) -> bool:
+        return isinstance(self.navigation.get_visible_page(), ViewerPage)
+
+    def toast(self, message: str) -> Adw.Toast:
+        toast = Adw.Toast.new(message)
+        self.toasts.add_toast(toast)
+        return toast
+
+    def _push_viewer(self, page: ViewerPage) -> None:
+        # A library toast must not sit on top of the score.
+        self.library.dismiss_scan_toast()
+        self.navigation.push(page)
 
     def _on_popped(self, _view, page) -> None:
         # Returning from the viewer: last-opened and any crop or rotation
@@ -154,7 +169,7 @@ class LeggioWindow(Adw.ApplicationWindow):
             self.library.reload()
             self.toast(f"File not found: {score.path}")
             return
-        self.navigation.push(ViewerPage(self.ctx, [score], score.title))
+        self._push_viewer(ViewerPage(self.ctx, [score], score.title))
 
     def open_path(self, path: Path) -> None:
         """Open a PDF given on the command line or by a file manager."""
@@ -186,7 +201,7 @@ class LeggioWindow(Adw.ApplicationWindow):
             (s for s in self.db.all_setlists() if s.id == setlist_id), None
         )
         name = setlist.name if setlist else "Setlist"
-        self.navigation.push(ViewerPage(self.ctx, scores, name))
+        self._push_viewer(ViewerPage(self.ctx, scores, name))
 
     def _on_close(self, *_args) -> bool:
         self.scanner.cancel()
