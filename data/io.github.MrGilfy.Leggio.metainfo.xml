@@ -84,15 +84,17 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
-    <release version="0.2.0" date="2026-11-02" type="development">
+    <release version="0.2.0" date="2026-11-02">
       <description>
-        <p>Night mode, and fixes for opening a PDF directly.</p>
+        <p>Night mode, a Flatpak bundle, and a screen that stays awake on more desktops.</p>
         <ul>
-          <li>Night mode inverts page colours for dark stages and is remembered for each score</li>
-          <li>A PDF opened from a file manager or the command line now opens fullscreen</li>
-          <li>Library scan messages no longer appear on top of the score</li>
-          <li>A PDF opened directly can be opened again after a library scan</li>
+          <li>Night mode for dark stages turns pages white-on-black and is remembered for each score</li>
           <li>The viewer's buttons use Leggio's own icons, so they show up with any icon theme</li>
+          <li>The screen stays awake on more desktops, including Sway and other wlroots compositors and X11, and Leggio logs a warning when it cannot keep it awake</li>
+          <li>Leggio is available as a Flatpak bundle on the releases page</li>
+          <li>Library scan messages no longer cover the score</li>
+          <li>A PDF opened directly can be opened again after a library scan</li>
+          <li>Picking a network folder without a local path no longer crashes Leggio</li>
         </ul>
       </description>
     </release>
