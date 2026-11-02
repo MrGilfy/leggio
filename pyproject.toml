@@ -26,10 +26,10 @@ version = {attr = "leggio.__version__"}
 [tool.setuptools.packages.find]
 where = ["src"]
 
-# The stylesheet is loaded from disk at startup, so it has to ship inside
-# the wheel alongside the modules.
+# The stylesheet and viewer icons are loaded from disk at startup, so they
+# have to ship inside the wheel alongside the modules.
 [tool.setuptools.package-data]
-"leggio.ui" = ["*.css"]
+"leggio.ui" = ["*.css", "icons/hicolor/*/actions/*"]
 
 [tool.ruff]
 line-length = 88

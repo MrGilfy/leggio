@@ -93,6 +93,8 @@ jobs:
           for f in \
             usr/bin/leggio \
             usr/lib/leggio/leggio/app.py \
+            usr/lib/leggio/leggio/ui/icons/hicolor/scalable/actions/leggio-back-symbolic.svg \
+            usr/lib/leggio/leggio/ui/icons/hicolor/24x24/actions/leggio-back-symbolic.symbolic.png \
             usr/share/applications/io.github.MrGilfy.Leggio.desktop \
             usr/share/metainfo/io.github.MrGilfy.Leggio.metainfo.xml \
             usr/share/icons/hicolor/scalable/apps/io.github.MrGilfy.Leggio.svg \

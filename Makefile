@@ -31,12 +31,13 @@ metainfodir := $(sharedir)/metainfo
 iconsdir    := $(sharedir)/icons/hicolor
 licensedir  := $(sharedir)/licenses/leggio
 
-.PHONY: all version install uninstall check clean
+.PHONY: all version install uninstall check icons clean
 
 all:
 	@echo "Leggio $(VERSION)"
 	@echo "  make install PREFIX=$(PREFIX)"
 	@echo "  make check      validate desktop entry and AppStream metadata"
+	@echo "  make icons      re-encode the viewer icons' PNG fallbacks"
 
 version:
 	@echo $(VERSION)
@@ -94,6 +95,19 @@ check:
 	appstreamcli validate --no-net data/$(APPID).metainfo.xml
 	$(PYTHON) -m compileall -q src/leggio
 	@echo "checks passed"
+
+# PNG fallbacks for the viewer icons, so they render without an SVG
+# loader. Needs gtk4-encode-symbolic-svg (Ubuntu: libgtk-4-bin).
+uiicons := src/leggio/ui/icons/hicolor
+
+icons:
+	for size in 24 32 48; do \
+		$(INSTALL) -d $(uiicons)/$${size}x$${size}/actions; \
+		for svg in $(uiicons)/scalable/actions/*.svg; do \
+			gtk4-encode-symbolic-svg -o $(uiicons)/$${size}x$${size}/actions \
+				"$$svg" $${size}x$${size} || exit 1; \
+		done; \
+	done
 
 clean:
 	find src -name '__pycache__' -type d -exec rm -rf {} +

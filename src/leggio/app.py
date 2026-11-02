@@ -28,6 +28,7 @@ from .ui.viewer import ViewerPage
 log = logging.getLogger(__name__)
 
 STYLE_PATH = Path(__file__).parent / "ui" / "style.css"
+ICONS_PATH = Path(__file__).parent / "ui" / "icons"
 
 
 class AppContext:
@@ -226,6 +227,10 @@ class LeggioApp(Adw.Application):
         ensure_dirs()
         self.config = Config.load()
         self.db = Database(DB_PATH)
+        display = Gdk.Display.get_default()
+        if display is not None:
+            # Bundled viewer icons, so the overlay bars don't depend on the theme.
+            Gtk.IconTheme.get_for_display(display).add_search_path(str(ICONS_PATH))
         self._load_style()
 
     def do_activate(self) -> None:

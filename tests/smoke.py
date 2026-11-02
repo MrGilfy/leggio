@@ -12,6 +12,7 @@ Needs a display; CI runs it under xvfb.
 from __future__ import annotations
 
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -36,12 +37,28 @@ if missing is not None:
     print(f"dependency missing: {missing}", file=sys.stderr)
     raise SystemExit(1)
 
-from gi.repository import GLib  # noqa: E402
+from gi.repository import Gdk, GLib, Gtk  # noqa: E402
 
 from leggio.app import LeggioApp  # noqa: E402
 from leggio.ui.library import LibraryPage  # noqa: E402
 
 failures: list[str] = []
+
+_UI = Path(__file__).resolve().parent.parent / "src" / "leggio" / "ui"
+BUNDLED_ICONS = sorted({
+    name
+    for source in _UI.glob("*.py")
+    for name in re.findall(r"leggio-[a-z0-9-]+-symbolic", source.read_text())
+})
+
+
+def check_icons() -> None:
+    theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+    if not BUNDLED_ICONS:
+        failures.append("no bundled icon names found in src/leggio/ui")
+    for name in BUNDLED_ICONS:
+        if not theme.has_icon(name):
+            failures.append(f"bundled icon not found: {name}")
 
 
 def inspect() -> bool:
@@ -59,6 +76,8 @@ def inspect() -> bool:
         print(f"  window:    {window.get_title()}")
         print(f"  page:      {type(page).__name__}")
         print(f"  scores:    {window.library.store.n_total}")
+        check_icons()
+        print(f"  icons:     {len(BUNDLED_ICONS)} bundled")
     except Exception as exc:                      # noqa: BLE001
         failures.append(f"{type(exc).__name__}: {exc}")
     finally:

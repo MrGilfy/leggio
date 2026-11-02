@@ -60,6 +60,7 @@
 }
 
 .viewer-button {
+  -gtk-icon-size: 22px;
   min-width: 40px;
   min-height: 40px;
   padding: 6px;
