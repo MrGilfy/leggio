@@ -10,8 +10,8 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = "GPL-3.0-or-later"
 
-# Runtime dependencies are all system packages installed via pacman
-# (python-gobject, gtk4, libadwaita, poppler-glib, python-cairo).
+# Runtime dependencies come from system packages or the Flatpak runtime
+# (PyGObject, pycairo, GTK 4, libadwaita, poppler-glib).
 # They are deliberately not listed here: PyGObject introspection bindings
 # cannot be resolved by pip in a way that matches the system GTK build.
 dependencies = []

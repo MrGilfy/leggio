@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Install target shared by the PKGBUILDs and by manual source installs.
+# Install target shared by the PKGBUILDs, the Flatpak manifest and manual
+# source installs.
 #
 #   make install                          -> /usr/local
 #   sudo make install PREFIX=/usr         -> /usr
