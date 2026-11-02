@@ -50,15 +50,23 @@ BUNDLED_ICONS = sorted({
     for source in _UI.glob("*.py")
     for name in re.findall(r"leggio-[a-z0-9-]+-symbolic", source.read_text())
 })
+# Every icon the UI asks the theme for. Leggio ships hicolor fallbacks for
+# the ones GTK and libadwaita do not, so all of them must resolve whatever
+# icon theme the desktop uses.
+ALL_ICONS = sorted({
+    name
+    for source in _UI.glob("*.py")
+    for name in re.findall(r'"([a-z0-9-]+-symbolic)"', source.read_text())
+})
 
 
 def check_icons() -> None:
     theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
     if not BUNDLED_ICONS:
         failures.append("no bundled icon names found in src/leggio/ui")
-    for name in BUNDLED_ICONS:
+    for name in ALL_ICONS:
         if not theme.has_icon(name):
-            failures.append(f"bundled icon not found: {name}")
+            failures.append(f"icon not found: {name}")
 
 
 def inspect() -> bool:
@@ -77,7 +85,7 @@ def inspect() -> bool:
         print(f"  page:      {type(page).__name__}")
         print(f"  scores:    {window.library.store.n_total}")
         check_icons()
-        print(f"  icons:     {len(BUNDLED_ICONS)} bundled")
+        print(f"  icons:     {len(ALL_ICONS)} found, {len(BUNDLED_ICONS)} bundled")
     except Exception as exc:                      # noqa: BLE001
         failures.append(f"{type(exc).__name__}: {exc}")
     finally:
