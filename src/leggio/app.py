@@ -22,6 +22,7 @@ from .render import RenderService
 from .scanner import Scanner, index_file
 from .thumbs import ThumbnailWorker
 from .ui.dialogs import PreferencesDialog, show_about
+from .ui.export_ui import ExportController
 from .ui.library import LibraryPage
 from .ui.viewer import ViewerPage
 
@@ -66,6 +67,10 @@ class AppContext:
         return self.window.inhibitor
 
     @property
+    def exporter(self) -> ExportController:
+        return self.window.exporter
+
+    @property
     def viewer_open(self) -> bool:
         return self.window.viewer_open
 
@@ -100,6 +105,7 @@ class LeggioWindow(Adw.ApplicationWindow):
         self.inhibitor = IdleInhibitor(application)
 
         self.ctx = AppContext(self)
+        self.exporter = ExportController(self.ctx)
 
         self.navigation = Adw.NavigationView()
         self.library = LibraryPage(self.ctx)
@@ -125,6 +131,7 @@ class LeggioWindow(Adw.ApplicationWindow):
     def _push_viewer(self, page: ViewerPage) -> None:
         # A library toast must not sit on top of the score.
         self.library.dismiss_scan_toast()
+        self.exporter.hide_progress()
         self.navigation.push(page)
 
     def _on_popped(self, _view, page) -> None:
@@ -185,6 +192,7 @@ class LeggioWindow(Adw.ApplicationWindow):
 
     def _on_close(self, *_args) -> bool:
         self.scanner.cancel()
+        self.exporter.cancel()
         self.thumbs.stop()
         self.render.shutdown()
         self.inhibitor.uninhibit()
