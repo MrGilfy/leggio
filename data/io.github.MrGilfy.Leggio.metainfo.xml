@@ -30,6 +30,7 @@
       <li>Turn pages by tap, swipe, keyboard or Bluetooth page-turner pedal</li>
       <li>Two pages side by side on a wide screen, one page on a tall one</li>
       <li>Draw on a score with a pen, highlighter, eraser and musical symbols</li>
+      <li>Night mode turns pages white-on-black for dark stages</li>
       <li>A setlist reads as one long document, several scores in a row</li>
       <li>Remembers where you stopped in each score</li>
       <li>Keeps the screen from going to sleep while you play</li>
@@ -83,6 +84,18 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.2.0" date="2026-11-02" type="development">
+      <description>
+        <p>Night mode, and fixes for opening a PDF directly.</p>
+        <ul>
+          <li>Night mode inverts page colours for dark stages and is remembered for each score</li>
+          <li>A PDF opened from a file manager or the command line now opens fullscreen</li>
+          <li>Library scan messages no longer appear on top of the score</li>
+          <li>A PDF opened directly can be opened again after a library scan</li>
+          <li>The viewer's buttons use Leggio's own icons, so they show up with any icon theme</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-07-24">
       <description>
         <p>First release.</p>
