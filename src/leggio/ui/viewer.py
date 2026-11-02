@@ -226,6 +226,10 @@ class ViewerPage(AnnotationMixin, CropMixin, Adw.NavigationPage):
     def crop(self) -> Optional[CropRect]:
         return self.score.crop
 
+    @property
+    def night(self) -> bool:
+        return self.score.night_mode
+
     def _info(self, index: Optional[int] = None):
         score = self.scores[index if index is not None else self.index]
         return self.infos.get(score.path)
@@ -417,9 +421,22 @@ class ViewerPage(AnnotationMixin, CropMixin, Adw.NavigationPage):
                 ctx.rectangle(x, y, width, height)
                 ctx.fill()
         ctx.restore()
+        self._apply_night(ctx, x, y, width, height)
 
         self._page_rects.append((page, x, y, width, height))
         self._draw_annotations(ctx, page, x, y, width, height)
+
+    def _apply_night(self, ctx, x: float, y: float,
+                     width: float, height: float) -> None:
+        """Night mode: invert the page just painted into this rectangle."""
+        if not self.night:
+            return
+        ctx.save()
+        ctx.set_operator(cairo.Operator.DIFFERENCE)
+        ctx.set_source_rgb(1, 1, 1)
+        ctx.rectangle(x, y, width, height)
+        ctx.fill()
+        ctx.restore()
 
     def _prefetch(self, drawn: list[int], scale: float, spread: bool) -> bool:
         if not drawn:
@@ -571,6 +588,13 @@ class ViewerPage(AnnotationMixin, CropMixin, Adw.NavigationPage):
             self.offset = 0.0
         self.area.queue_draw()
 
+    def set_night_mode(self, active: bool) -> None:
+        if self.control_bar.updating:
+            return
+        self.score.night_mode = active
+        self.ctx.db.update_score(self.score.id, night_mode=active)
+        self.area.queue_draw()
+
     def set_spread(self, active: bool) -> None:
         if self.control_bar.updating:
             return
@@ -649,6 +673,7 @@ class ViewerPage(AnnotationMixin, CropMixin, Adw.NavigationPage):
             page_text=f"{self.page + 1} / {count}" if count else "—",
             fit_width=self.fit == "width",
             half=self.half,
+            night=self.night,
             spread=self._spread_active(width, height),
             spread_sensitive=True,
         )
@@ -751,6 +776,10 @@ class ViewerPage(AnnotationMixin, CropMixin, Adw.NavigationPage):
             return True
         if keyval in (Gdk.KEY_0, Gdk.KEY_KP_0):
             self.zoom_reset()
+            return True
+        if keyval in (Gdk.KEY_n, Gdk.KEY_N):
+            self.set_night_mode(not self.night)
+            self._sync_controls()
             return True
         if keyval in (Gdk.KEY_m, Gdk.KEY_M):
             self.toggle_overlay()

@@ -147,6 +147,7 @@ class CropMixin:
             ctx.rectangle(x, y, width_px, height_px)
             ctx.fill()
         ctx.restore()
+        self._apply_night(ctx, x, y, width_px, height_px)
 
         draft = (self.crop_draft or CropRect(0.0, 0.0, 1.0, 1.0)).clamped()
         rx = x + draft.x0 * width_px

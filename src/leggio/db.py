@@ -24,7 +24,7 @@ from .models import Annotation, CropRect, Score, Setlist
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS scores (
@@ -50,7 +50,8 @@ CREATE TABLE IF NOT EXISTS scores (
   spread_override TEXT,
   missing         INTEGER NOT NULL DEFAULT 0,
   title_locked    INTEGER NOT NULL DEFAULT 0,
-  composer_locked INTEGER NOT NULL DEFAULT 0
+  composer_locked INTEGER NOT NULL DEFAULT 0,
+  night_mode      INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_scores_title       ON scores(title);
 CREATE INDEX IF NOT EXISTS idx_scores_composer    ON scores(composer);
@@ -105,8 +106,13 @@ WRITABLE = frozenset({
     "title", "composer", "last_opened", "last_page", "last_offset",
     "rotation", "crop_x0", "crop_y0", "crop_x1", "crop_y1", "crop_auto",
     "fit_mode", "spread_override", "missing", "title_locked",
-    "composer_locked", "page_count",
+    "composer_locked", "page_count", "night_mode",
 })
+
+# Columns added after the first release: (name, definition).
+ADDED_COLUMNS = (
+    ("night_mode", "INTEGER NOT NULL DEFAULT 0"),   # schema 3
+)
 
 
 class Database:
@@ -130,6 +136,11 @@ class Database:
         conn = self._conn
         version = conn.execute("PRAGMA user_version").fetchone()[0]
         conn.executescript(SCHEMA)
+        # CREATE TABLE IF NOT EXISTS leaves an older scores table as it was.
+        present = {r["name"] for r in conn.execute("PRAGMA table_info(scores)")}
+        for name, definition in ADDED_COLUMNS:
+            if name not in present:
+                conn.execute(f"ALTER TABLE scores ADD COLUMN {name} {definition}")
         if version < SCHEMA_VERSION:
             conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         conn.commit()

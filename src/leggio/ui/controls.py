@@ -37,7 +37,7 @@ def _toggle(icon: str, tooltip: str, callback: Callable) -> Gtk.ToggleButton:
 
 
 class ControlBar(Gtk.Box):
-    """back · title · page · fit · half · spread · rotate · crop · zoom"""
+    """back · title · page · fit · half · spread · night · rotate · crop · zoom"""
 
     __gtype_name__ = "LeggioControlBar"
 
@@ -79,6 +79,13 @@ class ControlBar(Gtk.Box):
         )
         self.append(self.spread_button)
 
+        self.night_button = _toggle(
+            "leggio-night-symbolic",
+            "Night mode — invert page colours (N)",
+            viewer.set_night_mode,
+        )
+        self.append(self.night_button)
+
         self.append(_button("leggio-rotate-symbolic",
                             "Rotate 90° (R)", viewer.rotate))
         self.append(_button("leggio-annotate-symbolic",
@@ -91,7 +98,8 @@ class ControlBar(Gtk.Box):
         self.append(_button("leggio-zoom-in-symbolic", "Zoom in", viewer.zoom_in))
 
     def sync(self, title: str, page_text: str, fit_width: bool,
-             half: bool, spread: bool, spread_sensitive: bool) -> None:
+             half: bool, night: bool, spread: bool,
+             spread_sensitive: bool) -> None:
         # Guard against the toggled handlers firing back into the viewer
         # while we are only reflecting its state.
         self._updating = True
@@ -99,6 +107,7 @@ class ControlBar(Gtk.Box):
         self.page_label.set_text(page_text)
         self.fit_button.set_active(fit_width)
         self.half_button.set_active(half)
+        self.night_button.set_active(night)
         self.spread_button.set_active(spread)
         self.half_button.set_sensitive(not spread)
         self._updating = False

@@ -7,7 +7,7 @@ import sqlite3
 
 import pytest
 
-from leggio.db import SCHEMA_VERSION, Database
+from leggio.db import SCHEMA, SCHEMA_VERSION, Database
 from leggio.models import Annotation, CropRect
 
 
@@ -38,6 +38,29 @@ def ink(score_id, page, points=((0.1, 0.1), (0.2, 0.2))):
 def test_new_database_is_at_current_schema_version(tmp_path):
     path = tmp_path / "library.db"
     Database(path).close()
+    with sqlite3.connect(path) as conn:
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
+
+
+def test_schema_2_library_gains_night_mode(tmp_path):
+    path = tmp_path / "library.db"
+    old_schema = SCHEMA.replace(
+        ",\n  night_mode      INTEGER NOT NULL DEFAULT 0", ""
+    )
+    assert old_schema != SCHEMA
+    with sqlite3.connect(path) as conn:
+        conn.executescript(old_schema)
+        conn.execute(
+            "INSERT INTO scores (path, title, added, last_page) "
+            "VALUES ('/a.pdf', 'A', 1.0, 3)"
+        )
+        conn.execute("PRAGMA user_version = 2")
+    db = Database(path)
+    [score] = db.all_scores()
+    assert (score.last_page, score.night_mode) == (3, False)
+    db.update_score(score.id, night_mode=True)
+    assert db.get_score(score.id).night_mode is True
+    db.close()
     with sqlite3.connect(path) as conn:
         assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
 
@@ -115,6 +138,14 @@ def test_update_score_stores_bools_as_ints(db, tmp_path):
     score_id, _ = scan(db, tmp_path / "a.pdf")
     db.update_score(score_id, missing=True)
     assert db.get_score(score_id).missing is True
+
+
+def test_night_mode_is_per_score(db, tmp_path):
+    a, _ = scan(db, tmp_path / "a.pdf")
+    b, _ = scan(db, tmp_path / "b.pdf")
+    db.update_score(a, night_mode=True)
+    assert db.get_score(a).night_mode is True
+    assert db.get_score(b).night_mode is False
 
 
 def test_crop_round_trip_and_clear(db, tmp_path):

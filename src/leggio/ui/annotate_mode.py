@@ -88,16 +88,19 @@ class AnnotationMixin:
             return HIGHLIGHT_COLOR, max(self.pen_width * 4.0, 0.012)
         return self.pen_color, self.pen_width
 
-    @staticmethod
-    def _rgba(color: str) -> tuple[float, float, float, float]:
+    def _rgba(self, color: str) -> tuple[float, float, float, float]:
         try:
             r = int(color[1:3], 16) / 255
             g = int(color[3:5], 16) / 255
             b = int(color[5:7], 16) / 255
             a = int(color[7:9], 16) / 255 if len(color) >= 9 else 1.0
-            return (r, g, b, a)
         except (ValueError, IndexError):
             return (0.85, 0.15, 0.15, 1.0)
+        # Night mode: dark ink would vanish on the inverted page, so it
+        # inverts with it; coloured ink keeps its colour.
+        if self.night and 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.25:
+            r, g, b = 1 - r, 1 - g, 1 - b
+        return (r, g, b, a)
 
     # ---------------------------------------------------- annotation drawing
 

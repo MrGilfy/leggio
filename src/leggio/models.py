@@ -77,6 +77,7 @@ class Score:
     missing: bool = False
     title_locked: bool = False
     composer_locked: bool = False
+    night_mode: bool = False
     tags: tuple[str, ...] = ()
 
     @property
@@ -111,6 +112,7 @@ class Score:
             missing=bool(row["missing"]),
             title_locked=bool(row["title_locked"]),
             composer_locked=bool(row["composer_locked"]),
+            night_mode=bool(row["night_mode"]),
             tags=tags,
         )
 
