@@ -97,6 +97,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.4.0" date="2026-11-02" type="development">
+      <description>
+        <p>A new app ID, ready for Flathub.</p>
+        <ul>
+          <li>The app ID is now io.github.mrgilfy.leggio. Flatpak users: before starting this version for the first time, move your library across with "mv ~/.var/app/io.github.MrGilfy.Leggio ~/.var/app/io.github.mrgilfy.leggio", then remove the old app with "flatpak uninstall io.github.MrGilfy.Leggio"</li>
+          <li>Installs from the AUR or from source keep their library without any steps</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-11-02">
       <description>
         <p>Jump links, bookmarks with a page overview, and PDF export with your annotations.</p>
