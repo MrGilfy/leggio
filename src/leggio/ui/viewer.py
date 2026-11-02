@@ -81,6 +81,8 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, Adw.NavigationPage):
         self._pan_last_x = 0.0
         self._pan_last_y = 0.0
         self._prefetch_signature = None
+        # Pages shown by the last draw, for actions on "what is on screen".
+        self._drawn_pages: list[int] = []
 
         self._init_annotate_mode()
         self._init_crop_mode()
@@ -322,6 +324,8 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, Adw.NavigationPage):
 
         ctx.set_source_rgb(0.08, 0.08, 0.09)
         ctx.paint()
+        # Reset first, so an early return never leaves another score's pages.
+        self._drawn_pages = []
 
         if self._info() is None:
             return
@@ -367,6 +371,8 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, Adw.NavigationPage):
                 page += 1
 
             y += height_px + GAP
+
+        self._drawn_pages = drawn
 
         signature = (self.score.path, tuple(drawn), round(scale, 4), spread)
         if (not self._interacting and not self._resize_pending

@@ -413,9 +413,13 @@ class Database:
             )
             self._conn.commit()
 
-    def clear_annotations(self, score_id: int, page: int) -> list[Annotation]:
-        """Wipe one page, returning what was removed so it can be undone."""
-        existing = self.annotations_for(score_id, page)
+    def clear_annotations(self, score_id: int, *pages: int) -> list[Annotation]:
+        """Wipe the given pages, returning what was removed so it can be undone."""
+        existing = [
+            annotation
+            for page in dict.fromkeys(pages)
+            for annotation in self.annotations_for(score_id, page)
+        ]
         self.delete_annotations([a.id for a in existing])
         return existing
 

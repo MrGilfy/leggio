@@ -253,7 +253,7 @@ class AnnotateBar(Gtk.Box):
         self.undo_button = _button("leggio-undo-symbolic", "Undo (Ctrl+Z)",
                                    viewer.annotation_undo)
         self.append(self.undo_button)
-        self.append(_button("leggio-clear-page-symbolic", "Clear this page",
+        self.append(_button("leggio-clear-page-symbolic", "Clear the pages on screen",
                             viewer.annotation_clear_page))
 
         done = Gtk.Button(label="Done")
