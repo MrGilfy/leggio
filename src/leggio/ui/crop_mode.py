@@ -15,6 +15,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Gdk, GLib  # noqa: E402
 
 from ..crop import detect_crop
+from ..geometry import rotate_rect, unrotate_rect
 from ..models import CropRect
 from ..pdf import PdfError, open_document
 from ..render import make_key
@@ -44,33 +45,13 @@ class CropMixin:
 
     # ------------------------------------------------------------ crop mode
 
+    # The draft is edited in display space and converted back on save, so
+    # dragging the left handle of a rotated page moves its on-screen left.
     def _to_display(self, rect: CropRect) -> CropRect:
-        """Page-space crop -> the orientation actually on screen.
-
-        A crop is stored unrotated, because that is the space Poppler
-        renders in, but the editor draws and drags in the rotated view. The
-        draft is therefore held in display space for the duration of the
-        edit and converted back on save - otherwise dragging the left
-        handle on a page rotated 90° would move its top edge.
-        """
-        rotation = self.rotation
-        if rotation == 90:
-            return CropRect(1 - rect.y1, rect.x0, 1 - rect.y0, rect.x1)
-        if rotation == 180:
-            return CropRect(1 - rect.x1, 1 - rect.y1, 1 - rect.x0, 1 - rect.y0)
-        if rotation == 270:
-            return CropRect(rect.y0, 1 - rect.x1, rect.y1, 1 - rect.x0)
-        return rect
+        return rotate_rect(rect, self.rotation)
 
     def _from_display(self, rect: CropRect) -> CropRect:
-        rotation = self.rotation
-        if rotation == 90:
-            return CropRect(rect.y0, 1 - rect.x1, rect.y1, 1 - rect.x0)
-        if rotation == 180:
-            return CropRect(1 - rect.x1, 1 - rect.y1, 1 - rect.x0, 1 - rect.y0)
-        if rotation == 270:
-            return CropRect(1 - rect.y1, rect.x0, 1 - rect.y0, rect.x1)
-        return rect
+        return unrotate_rect(rect, self.rotation)
 
     def enter_crop_mode(self) -> None:
         if self._info() is None:

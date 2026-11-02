@@ -14,7 +14,8 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, GLib, Gtk  # noqa: E402
 
-from ..models import FULL_PAGE, Annotation
+from .. import geometry
+from ..models import Annotation
 from .controls import HIGHLIGHT_COLOR, PEN_COLORS, PEN_WIDTHS
 from .symbols import draw_span_symbol, draw_symbol, is_span, needs_text
 
@@ -73,46 +74,14 @@ class AnnotationMixin:
     def _reload_annotations(self, page: int) -> None:
         self._annotations.pop((self.score.id, page), None)
 
-    def _rot_point(self, u: float, v: float) -> tuple[float, float]:
-        """Page space -> display space (before the crop is applied)."""
-        rotation = self.rotation
-        if rotation == 90:
-            return (1 - v, u)
-        if rotation == 180:
-            return (1 - u, 1 - v)
-        if rotation == 270:
-            return (v, 1 - u)
-        return (u, v)
-
-    def _unrot_point(self, a: float, b: float) -> tuple[float, float]:
-        rotation = self.rotation
-        if rotation == 90:
-            return (b, 1 - a)
-        if rotation == 180:
-            return (1 - a, 1 - b)
-        if rotation == 270:
-            return (1 - b, a)
-        return (a, b)
-
     def _page_to_screen(self, u, v, x, y, w, h) -> tuple[float, float]:
-        a, b = self._rot_point(u, v)
-        box = self._to_display(self.crop or FULL_PAGE)
-        return (
-            x + (a - box.x0) / max(box.width, 1e-9) * w,
-            y + (b - box.y0) / max(box.height, 1e-9) * h,
-        )
+        return geometry.page_to_screen(u, v, (x, y, w, h), self.rotation, self.crop)
 
     def _screen_to_page(self, sx, sy, x, y, w, h) -> tuple[float, float]:
-        box = self._to_display(self.crop or FULL_PAGE)
-        a = box.x0 + (sx - x) / max(w, 1e-9) * box.width
-        b = box.y0 + (sy - y) / max(h, 1e-9) * box.height
-        return self._unrot_point(a, b)
+        return geometry.screen_to_page(sx, sy, (x, y, w, h), self.rotation, self.crop)
 
     def _page_unit(self, w: float) -> float:
-        """Pixels per unit of page width — the scale annotation widths and
-        symbol sizes are expressed in."""
-        box = self._to_display(self.crop or FULL_PAGE)
-        return w / max(box.width, 1e-9)
+        return geometry.page_unit(w, self.rotation, self.crop)
 
     def _current_ink(self) -> tuple[str, float]:
         if self.tool == "highlighter":

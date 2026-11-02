@@ -31,6 +31,10 @@ where = ["src"]
 [tool.setuptools.package-data]
 "leggio.ui" = ["*.css", "icons/hicolor/*/actions/*"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
 [tool.ruff]
 line-length = 88
 src = ["src", "tests"]
