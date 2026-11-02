@@ -39,8 +39,10 @@ flatpak override --user --filesystem=/path:ro io.github.MrGilfy.Leggio
 libadwaita and poppler-glib, then:
 
 ```sh
+# Arch: sudo pacman -S --needed python-gobject python-cairo gtk4 libadwaita poppler-glib
 # Fedora: sudo dnf install python3-gobject python3-cairo gtk4 libadwaita poppler-glib
 # Debian, Ubuntu: sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-poppler-0.18
+# openSUSE: sudo zypper install python3-gobject python3-gobject-cairo typelib-1_0-Gtk-4_0 typelib-1_0-Adw-1 typelib-1_0-Poppler-0_18
 git clone https://github.com/MrGilfy/leggio.git && cd leggio
 sudo make install PREFIX=/usr
 ```

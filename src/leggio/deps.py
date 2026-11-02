@@ -11,13 +11,23 @@ from __future__ import annotations
 import sys
 from typing import Callable, Optional
 
-# (what it is, Arch package, Fedora package, Debian/Ubuntu package)
+# What it is -> (Arch, Fedora, Debian/Ubuntu, openSUSE) package.
 _PACKAGES = {
-    "PyGObject": ("python-gobject", "python3-gobject", "python3-gi"),
-    "pycairo": ("python-cairo", "python3-cairo", "python3-gi-cairo"),
-    "GTK 4": ("gtk4", "gtk4", "gir1.2-gtk-4.0"),
-    "libadwaita": ("libadwaita", "libadwaita", "gir1.2-adw-1"),
-    "poppler-glib": ("poppler-glib", "poppler-glib", "gir1.2-poppler-0.18"),
+    "PyGObject": (
+        "python-gobject", "python3-gobject", "python3-gi", "python3-gobject",
+    ),
+    "pycairo": (
+        "python-cairo", "python3-cairo", "python3-gi-cairo",
+        "python3-gobject-cairo",
+    ),
+    "GTK 4": ("gtk4", "gtk4", "gir1.2-gtk-4.0", "typelib-1_0-Gtk-4_0"),
+    "libadwaita": (
+        "libadwaita", "libadwaita", "gir1.2-adw-1", "typelib-1_0-Adw-1",
+    ),
+    "poppler-glib": (
+        "poppler-glib", "poppler-glib", "gir1.2-poppler-0.18",
+        "typelib-1_0-Poppler-0_18",
+    ),
 }
 
 
@@ -63,7 +73,7 @@ def first_missing() -> Optional[str]:
 
 
 def format_message(missing: str) -> str:
-    arch, fedora, debian = _PACKAGES[missing]
+    arch, fedora, debian, opensuse = _PACKAGES[missing]
     return "\n".join([
         f"Leggio cannot start: {missing} is not available.",
         "",
@@ -71,6 +81,7 @@ def format_message(missing: str) -> str:
         f"  Arch, Manjaro     sudo pacman -S --needed {arch}",
         f"  Fedora            sudo dnf install {fedora}",
         f"  Debian, Ubuntu    sudo apt install {debian}",
+        f"  openSUSE          sudo zypper install {opensuse}",
         "",
         "Leggio needs PyGObject, pycairo, GTK 4, libadwaita and",
         "poppler-glib. See the README for the full list.",
