@@ -7,17 +7,16 @@ import math
 import time
 from typing import Optional
 
-import cairo
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, GLib, Gtk  # noqa: E402
 
-from .. import geometry
+from .. import annotation_paint, geometry
 from ..models import Annotation
 from .controls import HIGHLIGHT_COLOR, PEN_COLORS, PEN_WIDTHS
-from .symbols import draw_span_symbol, draw_symbol, is_span, needs_text
+from .symbols import is_span, needs_text
 
 ERASER_RADIUS = 22        # eraser reach in device px
 # Stamped symbols are sized from the pen width. 14x put a fermata at twice
@@ -93,13 +92,10 @@ class AnnotateModeMixin:
         return self.pen_color, self.pen_width
 
     def _rgba(self, color: str) -> tuple[float, float, float, float]:
-        try:
-            r = int(color[1:3], 16) / 255
-            g = int(color[3:5], 16) / 255
-            b = int(color[5:7], 16) / 255
-            a = int(color[7:9], 16) / 255 if len(color) >= 9 else 1.0
-        except (ValueError, IndexError):
-            return (0.85, 0.15, 0.15, 1.0)
+        parsed = annotation_paint.parse_color(color)
+        if parsed is annotation_paint.FALLBACK_COLOR:
+            return parsed
+        r, g, b, a = parsed
         # Night mode: dark ink would vanish on the inverted page, so it
         # inverts with it; coloured ink keeps its colour.
         if self.night and 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.25:
@@ -124,8 +120,7 @@ class AnnotateModeMixin:
         # the neighbouring page in a spread or half-page view.
         ctx.rectangle(x, y, w, h)
         ctx.clip()
-        ctx.set_line_cap(cairo.LineCap.ROUND)
-        ctx.set_line_join(cairo.LineJoin.ROUND)
+        annotation_paint.prepare(ctx)
 
         for annotation in annotations:
             self._draw_annotation(ctx, annotation, x, y, w, h, unit)
@@ -153,80 +148,26 @@ class AnnotateModeMixin:
 
         ctx.restore()
 
+    def _to_screen(self, x, y, w, h):
+        return lambda u, v: self._page_to_screen(u, v, x, y, w, h)
+
     def _draw_annotation(self, ctx, annotation, x, y, w, h, unit) -> None:
-        if annotation.kind == Annotation.LINK:
-            return  # drawn as a marker by link_mode, on top of everything
-        if annotation.kind == Annotation.SYMBOL:
-            data = annotation.data
-            ctx.set_source_rgba(*self._rgba(annotation.color))
-            self._draw_symbol_at(
-                ctx, data.get("glyph", "fermata"),
-                data.get("x", 0.5), data.get("y", 0.5),
-                max(data.get("size", 0.05) * unit, 4.0),
-                x, y, w, h,
-                span=data.get("span"), label=data.get("label"),
-            )
-        else:
-            self._draw_ink(ctx, annotation.points, annotation.color,
-                           annotation.width, x, y, w, h, unit)
+        annotation_paint.paint_annotation(
+            ctx, annotation, self._to_screen(x, y, w, h), unit, self.rotation,
+            self._rgba,
+        )
 
     def _draw_symbol_at(self, ctx, glyph, u, v, size, x, y, w, h,
                         span=None, label=None) -> None:
-        """Draw a symbol in page space, rotated with the page.
-
-        Span symbols run along the vector between their page-space ends, so they
-        follow the rotation too.
-        """
-        sx, sy = self._page_to_screen(u, v, x, y, w, h)
-        if span is not None and is_span(glyph):
-            ex, ey = self._page_to_screen(u + span, v, x, y, w, h)
-            length = math.hypot(ex - sx, ey - sy)
-            angle = math.atan2(ey - sy, ex - sx)
-            ctx.save()
-            ctx.translate(sx, sy)
-            ctx.rotate(angle)
-            draw_span_symbol(ctx, glyph, 0, 0, length, size)
-            ctx.restore()
-            return
-        ctx.save()
-        ctx.translate(sx, sy)
-        ctx.rotate(math.radians(self.rotation))
-        draw_symbol(ctx, glyph, 0, 0, size, label=label)
-        ctx.restore()
+        annotation_paint.paint_symbol(
+            ctx, glyph, u, v, size, self._to_screen(x, y, w, h), self.rotation,
+            span=span, label=label,
+        )
 
     def _draw_ink(self, ctx, points, color, width, x, y, w, h, unit) -> None:
-        if not points:
-            return
-        screen = [self._page_to_screen(u, v, x, y, w, h) for u, v in points]
-        ctx.set_source_rgba(*self._rgba(color))
-        line_width = max(width * unit, 1.0)
-        ctx.set_line_width(line_width)
-
-        if len(screen) == 1:
-            ctx.arc(screen[0][0], screen[0][1], line_width / 2, 0, 2 * math.pi)
-            ctx.fill()
-            return
-
-        ctx.move_to(*screen[0])
-        if len(screen) == 2:
-            ctx.line_to(*screen[1])
-        else:
-            # Quadratic through the midpoints: cheap smoothing that takes
-            # the jitter out of a finger-drawn stroke.
-            for i in range(1, len(screen) - 1):
-                mx = (screen[i][0] + screen[i + 1][0]) / 2
-                my = (screen[i][1] + screen[i + 1][1]) / 2
-                self._quad_to(ctx, screen[i][0], screen[i][1], mx, my)
-            ctx.line_to(*screen[-1])
-        ctx.stroke()
-
-    @staticmethod
-    def _quad_to(ctx, qx, qy, ex, ey) -> None:
-        x0, y0 = ctx.get_current_point()
-        ctx.curve_to(
-            x0 + 2 / 3 * (qx - x0), y0 + 2 / 3 * (qy - y0),
-            ex + 2 / 3 * (qx - ex), ey + 2 / 3 * (qy - ey),
-            ex, ey,
+        annotation_paint.paint_ink(
+            ctx, points, color, width, self._to_screen(x, y, w, h), unit,
+            self._rgba,
         )
 
     # ------------------------------------------------------ annotation input
