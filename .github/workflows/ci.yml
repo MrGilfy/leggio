@@ -125,3 +125,18 @@ jobs:
             test -e "stage/$f" || { echo "missing: $f"; exit 1; }
           done
           echo "installed layout is complete"
+
+  flatpak:
+    name: Flatpak bundle
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          manifest-path: packaging/flatpak/io.github.MrGilfy.Leggio.yml
+          bundle: leggio.flatpak
+          artifact-name: leggio-flatpak

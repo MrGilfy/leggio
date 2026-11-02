@@ -9,9 +9,11 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Publish release
+  source:
+    name: Check and build the source tarball
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,6 +24,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             desktop-file-utils appstream
+
+      - name: Read the version from the tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       # A tag that disagrees with the version in the source would ship a
       # package whose AUR pkgver never matches what the app reports.
@@ -84,10 +90,52 @@ jobs:
             echo "exactly what the PKGBUILD source line points at."
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source
+          path: |
+            leggio-*.tar.gz
+            sha256.txt
+
+  flatpak:
+    name: Build the Flatpak bundle
+    needs: source
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          manifest-path: packaging/flatpak/io.github.MrGilfy.Leggio.yml
+          bundle: leggio-${{ needs.source.outputs.version }}.flatpak
+          artifact-name: flatpak
+          # A release is built from scratch, never from a cached module.
+          cache: false
+
+  # Runs only when both builds succeeded, so a release never appears with
+  # one of its assets missing.
+  publish:
+    name: Publish the release
+    needs: [source, flatpak]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List checksums for both assets
+        working-directory: dist
+        run: sha256sum leggio-*.tar.gz leggio-*.flatpak | tee sha256.txt
+
       - name: Create the GitHub release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            leggio-*.tar.gz
-            sha256.txt
+            dist/leggio-*.tar.gz
+            dist/leggio-*.flatpak
+            dist/sha256.txt
           generate_release_notes: true

@@ -31,13 +31,14 @@ metainfodir := $(sharedir)/metainfo
 iconsdir    := $(sharedir)/icons/hicolor
 licensedir  := $(sharedir)/licenses/leggio
 
-.PHONY: all version install uninstall check icons clean
+.PHONY: all version install uninstall check icons flatpak clean
 
 all:
 	@echo "Leggio $(VERSION)"
 	@echo "  make install PREFIX=$(PREFIX)"
 	@echo "  make check      validate desktop entry and AppStream metadata"
 	@echo "  make icons      re-encode the viewer icons' PNG fallbacks"
+	@echo "  make flatpak    build, install (--user) and bundle the Flatpak"
 
 version:
 	@echo $(VERSION)
@@ -108,6 +109,18 @@ icons:
 				"$$svg" $${size}x$${size} || exit 1; \
 		done; \
 	done
+
+# Builds the same manifest CI does, installs it for the current user and
+# writes a single-file bundle to build/. Needs flatpak-builder and
+# org.gnome.Sdk; see docs/MAINTAINING.md.
+manifest := packaging/flatpak/$(APPID).yml
+
+flatpak:
+	flatpak-builder --user --install --force-clean \
+		--repo=build/flatpak-repo build/flatpak $(manifest)
+	flatpak build-bundle build/flatpak-repo build/leggio-$(VERSION).flatpak \
+		$(APPID) --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo
+	@echo "bundle: build/leggio-$(VERSION).flatpak"
 
 clean:
 	find src -name '__pycache__' -type d -exec rm -rf {} +
