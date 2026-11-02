@@ -51,7 +51,15 @@
   <screenshots>
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/MrGilfy/leggio/main/data/screenshots/library.png</image>
-      <caption>The score library</caption>
+      <caption>The score library, with tags and setlists</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/MrGilfy/leggio/main/data/screenshots/viewer-night.png</image>
+      <caption>A score in night mode, two pages side by side</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/MrGilfy/leggio/main/data/screenshots/overview.png</image>
+      <caption>The page overview with bookmarks</caption>
     </screenshot>
   </screenshots>
 
