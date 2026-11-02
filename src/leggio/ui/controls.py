@@ -114,10 +114,12 @@ class ControlBar(Gtk.Box):
         return self._updating
 
 
+# The first colour is the default. Near-black rather than pure black, so
+# night mode's inversion turns it near-white like the printed notation.
 PEN_COLORS = [
+    ("#2b2b2b", "Black"),
     ("#d92626", "Red"),
     ("#1c71d8", "Blue"),
-    ("#2b2b2b", "Pencil"),
     ("#26a269", "Green"),
 ]
 HIGHLIGHT_COLOR = "#f5c21199"   # translucent, so notation shows through
