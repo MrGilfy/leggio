@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Callable
 
@@ -17,6 +18,8 @@ from ..config import Config
 from ..db import Database
 from ..models import Score
 from ..pdf import clean_title
+
+log = logging.getLogger(__name__)
 
 
 class MetadataDialog(Adw.Dialog):
@@ -271,7 +274,12 @@ class PreferencesDialog(Adw.PreferencesDialog):
             return  # user cancelled
         if folder is None:
             return
-        path = Path(folder.get_path())
+        local = folder.get_path()
+        if local is None:
+            # A network location with no local mount (no gvfs-fuse).
+            log.warning("cannot add %s: it has no local path", folder.get_uri())
+            return
+        path = Path(local)
         directories = self.config.directories
         if path not in directories:
             directories.append(path)
