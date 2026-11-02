@@ -1,13 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Keep the screen awake while a score is open.
 
-Layered on purpose. GTK's own inhibitor is the right answer when something
-implements the session-manager or portal interface, but on a bare compositor
-session - niri started from a TTY, say - there may be nothing listening, and
-gtk_application_inhibit() then returns 0. The org.freedesktop.ScreenSaver
-fallback covers most idle daemons. If neither works we log once and carry
-on: a viewer that refuses to open because it cannot stop the screen blanking
-would be worse than one that blanks.
+Tries GTK's inhibitor, then org.freedesktop.ScreenSaver for sessions with no
+portal or session manager (a bare compositor started from a TTY). If both
+fail it logs once and carries on.
 """
 
 from __future__ import annotations

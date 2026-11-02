@@ -1,13 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Runtime dependency check.
 
-Leggio's dependencies are system libraries reached through GObject
-introspection, not things pip can install. When one is missing the raw
-failure is an ImportError or a ValueError from gi.require_version, neither
-of which tells anyone which package to install. This module turns that into
-a straight answer.
-
-Imported before anything touches gi, so it must not import gi itself at
+Turns the ImportError or gi.require_version ValueError of a missing system
+library into the name of the package to install. Must not import gi at
 module level.
 """
 
@@ -47,9 +42,7 @@ def _probe_namespace(namespace: str, version: str) -> Callable[[], bool]:
     return probe
 
 
-# Ordered so the most fundamental missing piece is reported first: without
-# PyGObject every later probe would fail too, and naming all five would be
-# noise.
+# Most fundamental first: without PyGObject every later probe fails too.
 _CHECKS: list[tuple[str, Callable[[], bool]]] = [
     ("PyGObject", _probe_pygobject),
     ("pycairo", _probe_pycairo),

@@ -1,15 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The viewer.
+"""The viewer: one score, or a setlist, as a vertical strip of pages.
 
-Position is held as (page, offset) where offset is a *fraction* of the
-current page's height rather than a pixel scroll. That choice makes
-half-page turns exact regardless of zoom or window size, survives a resize
-without drift, and is what gets persisted to last_page/last_offset.
+Position is (page, offset), offset being a fraction of the current page's
+height, so half-page turns stay exact at any zoom or window size; it is what
+last_page/last_offset store. A half-page turn adds 0.5, showing the bottom
+of one page above the top of the next.
 
-Pages are laid out as a vertical strip: the current page at -offset, the
-next below it. A half-page turn advances the strip by 0.5, so the screen
-shows the bottom half of one page above the top half of the next - the
-upcoming system is on screen before you commit to the turn.
+Annotation and crop editing live in annotate_mode.py and crop_mode.py.
 """
 
 from __future__ import annotations
@@ -27,9 +24,9 @@ from gi.repository import Adw, Gdk, GLib, Gtk  # noqa: E402
 
 from ..models import CropRect, Score
 from ..render import PRIORITY_PREFETCH, make_key
-from .annotate_mode import AnnotationMixin
+from .annotate_mode import AnnotateModeMixin
 from .controls import AnnotateBar, ControlBar, CropBar
-from .crop_mode import CropMixin
+from .crop_mode import CropModeMixin
 
 log = logging.getLogger(__name__)
 
@@ -47,7 +44,7 @@ def _normalise_fit(value: object) -> str:
     return "width" if value == "width" else "page"
 
 
-class ViewerPage(AnnotationMixin, CropMixin, Adw.NavigationPage):
+class ViewerPage(AnnotateModeMixin, CropModeMixin, Adw.NavigationPage):
     """One score, or a setlist paged through end to end."""
 
     __gtype_name__ = "LeggioViewerPage"
@@ -85,8 +82,8 @@ class ViewerPage(AnnotationMixin, CropMixin, Adw.NavigationPage):
         self._pan_last_y = 0.0
         self._prefetch_signature = None
 
-        self._init_annotation()
-        self._init_crop()
+        self._init_annotate_mode()
+        self._init_crop_mode()
 
         self._key_controller: Optional[Gtk.EventControllerKey] = None
 
@@ -183,9 +180,8 @@ class ViewerPage(AnnotationMixin, CropMixin, Adw.NavigationPage):
         window.fullscreen()
         self.ctx.inhibitor.inhibit(window, "Viewing sheet music")
 
-        # Capture phase, on the window: a Bluetooth page-turner pedal is
-        # just a keyboard, and its keypresses must not be eaten by whatever
-        # happens to hold focus (an overlay button, say) before we see them.
+        # Capture phase on the window: a page-turner pedal is a keyboard, and
+        # a focused overlay button must not eat its keys.
         controller = Gtk.EventControllerKey.new()
         controller.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
         controller.connect("key-pressed", self._on_key_pressed)
@@ -311,10 +307,8 @@ class ViewerPage(AnnotationMixin, CropMixin, Adw.NavigationPage):
         elif self.fit == "width":
             base = width / content_w
         else:
-            # Contain, not literally fit-height. On a portrait display a
-            # portrait page scaled to the screen height comes out wider
-            # than the screen and loses both margins; whichever axis binds
-            # first has to win.
+            # Contain, not fit-height: on a portrait screen fit-height would
+            # push a portrait page past both side edges.
             base = min(height / content_h, width / content_w)
         return max(base, 0.01) * self.zoom
 
@@ -322,8 +316,7 @@ class ViewerPage(AnnotationMixin, CropMixin, Adw.NavigationPage):
 
     def _draw(self, _area, ctx, width: int, height: int) -> None:
         factor = self.get_scale_factor() or 1
-        # Everything below works in device pixels, so a page renders at
-        # exactly its on-screen pixel size and the blit is 1:1.
+        # Device pixels throughout, so pages render at on-screen size and blit 1:1.
         ctx.scale(1.0 / factor, 1.0 / factor)
         dev_w, dev_h = width * factor, height * factor
 
@@ -391,9 +384,8 @@ class ViewerPage(AnnotationMixin, CropMixin, Adw.NavigationPage):
         )
 
         if self._interacting or self._resize_pending:
-            # Mid-gesture or mid-resize: use whatever is already in the
-            # cache rather than queueing renders for a geometry that is
-            # still changing.
+            # Mid-gesture or resize: cache only, no renders for a geometry
+            # that is still changing.
             surface = self.ctx.render.cache.get(key)
         else:
             surface = self.ctx.render.request(key, self._on_rendered)
@@ -442,14 +434,9 @@ class ViewerPage(AnnotationMixin, CropMixin, Adw.NavigationPage):
         if not drawn:
             return False
         count = self._page_count()
-        candidates = []
-        if drawn:
-            candidates.append(drawn[-1] + 1)
-            if spread:
-                candidates.append(drawn[-1] + 2)
-            candidates.append(drawn[0] - 1)
-            if spread:
-                candidates.append(drawn[0] - 2)
+        candidates = [drawn[-1] + 1, drawn[0] - 1]
+        if spread:
+            candidates += [drawn[-1] + 2, drawn[0] - 2]
         for page in candidates:
             if not (0 <= page < count):
                 continue
@@ -675,7 +662,6 @@ class ViewerPage(AnnotationMixin, CropMixin, Adw.NavigationPage):
             half=self.half,
             night=self.night,
             spread=self._spread_active(width, height),
-            spread_sensitive=True,
         )
 
     # ------------------------------------------------------------ persistence
@@ -788,7 +774,7 @@ class ViewerPage(AnnotationMixin, CropMixin, Adw.NavigationPage):
 
     # -------------------------------------------------------------- gestures
 
-    def _on_click_released(self, gesture, n_press, x, y) -> None:
+    def _on_click_released(self, _gesture, _n_press, x, y) -> None:
         if self.crop_mode or self.annotate_mode:
             return
         # Decide on an idle callback so that a swipe or drag for the same

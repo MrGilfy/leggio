@@ -25,10 +25,10 @@ ERASER_RADIUS = 22        # eraser reach in device px
 SYMBOL_SCALE = 5.0
 
 
-class AnnotationMixin:
+class AnnotateModeMixin:
     """Annotation state and behaviour, mixed into ViewerPage."""
 
-    def _init_annotation(self) -> None:
+    def _init_annotate_mode(self) -> None:
         self.annotate_mode = False
         self.tool = "pen"                 # pen | highlighter | symbol | eraser
         self.pen_color = PEN_COLORS[0][0]
@@ -166,12 +166,10 @@ class AnnotationMixin:
 
     def _draw_symbol_at(self, ctx, glyph, u, v, size, x, y, w, h,
                         span=None, label=None) -> None:
-        """Place a symbol in page space, oriented with the page.
+        """Draw a symbol in page space, rotated with the page.
 
-        A rotated score must carry its markings round with it, so the
-        context is rotated to match. Spanning symbols are drawn along the
-        vector between their two page-space endpoints, which makes them
-        follow the rotation for free.
+        Span symbols run along the vector between their page-space ends, so they
+        follow the rotation too.
         """
         sx, sy = self._page_to_screen(u, v, x, y, w, h)
         if span is not None and is_span(glyph):
@@ -253,7 +251,7 @@ class AnnotationMixin:
 
         if self.tool == "eraser":
             self._eraser_pos = (page, u, v)
-            self._erase_at(page, u, v, ERASER_RADIUS / self._page_unit(w) * 1.0)
+            self._erase_at(page, u, v, ERASER_RADIUS / self._page_unit(w))
         elif self.tool == "symbol":
             glyph = self.symbol_glyph
             if is_span(glyph):
@@ -401,12 +399,7 @@ class AnnotationMixin:
         return math.hypot(px - (x0 + t * dx), py - (y0 + t * dy))
 
     def _erase_at(self, page: int, u: float, v: float, radius: float) -> None:
-        """Whole-stroke erase.
-
-        Deleting the entire stroke you touched is far more predictable at
-        arm's length than nibbling pixels out of it, and it keeps every
-        annotation a single undoable object.
-        """
+        """Erase whole strokes: predictable at arm's length, one undo step each."""
         hits = []
         for annotation in self._annotations_for(page):
             if annotation.kind == Annotation.SYMBOL:
@@ -482,18 +475,11 @@ class AnnotationMixin:
         if not self._undo_stack:
             return
         action, payload = self._undo_stack.pop()
-        pages: set[int] = set()
         if action == "add":
             self.ctx.db.delete_annotations(payload)
-            for page, *_rest in self._page_rects:
-                pages.add(page)
-            pages.add(self.page)
         else:
             for annotation in payload:
                 annotation.id = self.ctx.db.add_annotation(annotation)
-                pages.add(annotation.page)
-        for page in pages | {self.page}:
-            self._reload_annotations(page)
         self._annotations.clear()
         self._sync_annotate_bar()
         self.area.queue_draw()

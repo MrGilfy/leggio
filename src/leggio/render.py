@@ -1,17 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Page rendering service.
 
-Design in one paragraph: pages are rasterised on a single background thread
-at exactly the device-pixel size they will occupy on screen, cached as
-cairo image surfaces, and blitted by the draw handler at scale 1:1. A page
-turn therefore costs a dictionary lookup and a texture upload, not a
-rasterisation. Neighbouring pages are rendered speculatively at lower
-priority, so by the time you turn, the page is already resident.
-
-Threading rule, same as everywhere else in Leggio: a Poppler document is
-only ever touched by the thread that opened it. Nothing here hands a
-document, page or anything derived from one back to the main loop - only
-finished cairo surfaces, which are plain pixel buffers.
+Pages are rasterised on one background thread at their exact on-screen
+device-pixel size, cached as cairo image surfaces and blitted 1:1, so a page
+turn is a cache lookup. Neighbouring pages are prefetched at lower priority.
+Only finished surfaces, never Poppler objects, reach the main loop.
 """
 
 from __future__ import annotations
@@ -64,12 +57,7 @@ class RenderKey:
 
 
 class PageCache:
-    """LRU bounded by total bytes rather than entry count.
-
-    Counting entries would be wrong: one 4K page is ~34 MB while a
-    thumbnail-sized render is well under 1 MB, so a fixed entry count either
-    wastes memory or blows past it depending on window size.
-    """
+    """LRU bounded by bytes: one page can be <1 MB or ~34 MB."""
 
     def __init__(self, max_bytes: int):
         self.max_bytes = max_bytes
@@ -98,10 +86,8 @@ class PageCache:
     def find_similar(
         self, path: str, page: int, rotation: int, crop: tuple
     ) -> Optional[cairo.ImageSurface]:
-        """Any cached render of this page at a different size.
-
-        Used as an instant stand-in while the correctly sized render is in
-        flight: a briefly soft page beats a blank screen.
+        """Any cached render of this page at another size, shown soft while
+        the right one renders.
         """
         with self._lock:
             best = None
@@ -180,11 +166,7 @@ class RenderService:
         self._queue.put((-1, -1, None))
 
     def invalidate(self) -> int:
-        """Bump the generation so queued-but-not-yet-started work is dropped.
-
-        Called on resize and rotation, where every pending render is for a
-        geometry that no longer exists.
-        """
+        """Drop queued work that has not started (after a resize or rotation)."""
         self._generation += 1
         return self._generation
 
@@ -214,11 +196,7 @@ class RenderService:
         callback: Callable[[RenderKey, cairo.ImageSurface], None],
         priority: int = PRIORITY_VISIBLE,
     ) -> Optional[cairo.ImageSurface]:
-        """Return the surface immediately if cached, otherwise queue it.
-
-        The synchronous return is the fast path that makes page turns feel
-        instant: a prefetched page never touches the queue at all.
-        """
+        """Return the cached surface, or queue a render and return None."""
         surface = self.cache.get(key)
         if surface is not None:
             return surface

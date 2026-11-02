@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Translucent overlay bars for the viewer.
 
-Buttons are deliberately oversized. This is operated at arm's length, often
-with a hand that is about to be somewhere else, so a comfortable target
-matters more than a compact bar.
+Buttons are oversized on purpose: they are used at arm's length.
 """
 
 from __future__ import annotations
@@ -98,8 +96,7 @@ class ControlBar(Gtk.Box):
         self.append(_button("leggio-zoom-in-symbolic", "Zoom in", viewer.zoom_in))
 
     def sync(self, title: str, page_text: str, fit_width: bool,
-             half: bool, night: bool, spread: bool,
-             spread_sensitive: bool) -> None:
+             half: bool, night: bool, spread: bool) -> None:
         # Guard against the toggled handlers firing back into the viewer
         # while we are only reflecting its state.
         self._updating = True
@@ -176,9 +173,7 @@ class AnnotateBar(Gtk.Box):
             if icon is not None:
                 button.set_icon_name(icon)
             else:
-                # Adwaita has no eraser or highlighter icon, so these are
-                # drawn to match the symbol palette rather than borrowing a
-                # glyph that means something else.
+                # Drawn to match the symbol palette; no stock icon fits.
                 area = Gtk.DrawingArea()
                 area.set_content_width(22)
                 area.set_content_height(22)

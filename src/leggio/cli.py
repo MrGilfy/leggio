@@ -1,9 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Console entry point.
 
-Deliberately thin, and deliberately the thing `leggio` in PATH points at:
-it checks the system dependencies *before* importing anything that touches
-gi, so a missing GTK produces an explanation rather than a traceback.
+Checks the system dependencies before anything imports gi, so a missing GTK
+gives an explanation instead of a traceback.
 """
 
 from __future__ import annotations

@@ -1,10 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Recursive PDF discovery, on a worker thread.
 
-The scan walks the configured directories, then opens each new or changed
-file once to read its page count and author. Files whose size and mtime
-match what the database already holds are skipped without being opened,
-which is what keeps a rescan of a large library near-instant.
+Files whose size and mtime match the database are skipped unopened, which
+keeps rescans of a large library fast.
 """
 
 from __future__ import annotations
@@ -61,12 +59,7 @@ def find_pdfs(directories: Iterable[Path], follow_symlinks: bool = False) -> lis
 
 
 def index_file(db: Database, path: Path) -> Optional[int]:
-    """Add or refresh one PDF, returning its score id.
-
-    Used when a file arrives from outside the library - opened with Leggio
-    from a file manager - so it gets a row like any other score and keeps
-    its reading position next time.
-    """
+    """Add or refresh one PDF opened from outside the library; returns its id."""
     try:
         stat = path.stat()
         document = open_document(path)
@@ -90,11 +83,7 @@ def index_file(db: Database, path: Path) -> Optional[int]:
 
 
 class Scanner:
-    """Runs one scan at a time on a background thread.
-
-    Callbacks are always delivered on the GTK main loop via idle_add, so the
-    UI can touch widgets from them directly.
-    """
+    """One scan at a time on a worker thread; callbacks run on the main loop."""
 
     def __init__(self, db: Database):
         self.db = db

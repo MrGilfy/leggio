@@ -25,10 +25,10 @@ log = logging.getLogger(__name__)
 CROP_HANDLE_PX = 44       # touch-sized grab area for the crop handles
 
 
-class CropMixin:
+class CropModeMixin:
     """Crop editing state and behaviour, mixed into ViewerPage."""
 
-    def _init_crop(self) -> None:
+    def _init_crop_mode(self) -> None:
         self.crop_mode = False
         self.crop_draft: Optional[CropRect] = None
         self._crop_rect_px: Optional[tuple[float, float, float, float]] = None

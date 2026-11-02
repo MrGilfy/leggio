@@ -84,9 +84,8 @@ class LibraryPage(Adw.NavigationPage):
             row = Adw.ActionRow(title=title)
             row.add_prefix(Gtk.Image.new_from_icon_name(icon))
             self.views_list.append(row)
-        # Only meaningful once something has actually gone missing; hidden
-        # otherwise so it is not a permanent unexplained entry. Hiding keeps
-        # the row's index, which _on_view_selected maps to a filter mode.
+        # Shown only once something is missing. Hidden, not removed, so the
+        # row index _on_view_selected maps to a filter stays put.
         self.missing_row = self.views_list.get_row_at_index(2)
         self.missing_row.set_visible(False)
         self.views_list.connect("row-selected", self._on_view_selected)
@@ -248,9 +247,7 @@ class LibraryPage(Adw.NavigationPage):
         card = list_item.get_child()
         obj = list_item.get_item()
         card.bind(obj)
-        # Thumbnails are requested only for items the grid actually binds,
-        # so scrolling drives the work instead of the whole library queueing
-        # up front.
+        # Thumbnails are requested as cards bind, so scrolling drives the work.
         if obj.thumb is None and not obj.score.missing:
             self.ctx.thumbs.request(obj.score, self._on_thumb_ready)
 

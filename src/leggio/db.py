@@ -1,14 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """SQLite library index.
 
-One connection, shared across threads behind a lock, in WAL mode. At this
-scale (thousands of rows, single user) that is simpler and less error-prone
-than per-thread connections, and it keeps the scanner and thumbnail workers
-from having to marshal every write back to the main loop.
+One connection shared across threads behind a lock, in WAL mode.
 
-Core invariant: the scanner never deletes rows and never overwrites user
-metadata. A file that disappears is flagged `missing`; everything the user
-typed or adjusted stays put.
+The scanner never deletes rows or overwrites user metadata: a file that
+disappears is only flagged `missing`.
 """
 
 from __future__ import annotations
@@ -99,9 +95,7 @@ CREATE TABLE IF NOT EXISTS annotations (
 CREATE INDEX IF NOT EXISTS idx_annotations ON annotations(score_id, page);
 """
 
-# Columns a caller is allowed to write through update_score(). Anything not
-# listed here cannot be set by field name, which keeps the SQL injection
-# surface of the dynamic UPDATE at zero.
+# The only columns update_score() may set by name; keeps its dynamic SQL safe.
 WRITABLE = frozenset({
     "title", "composer", "last_opened", "last_page", "last_offset",
     "rotation", "crop_x0", "crop_y0", "crop_x1", "crop_y1", "crop_auto",
@@ -224,15 +218,9 @@ class Database:
             ).fetchone()
 
             if row is None and content_key:
-                # The file may simply have moved, in which case tags, crop
-                # and reading position must follow it. Candidates are rows
-                # with the same fingerprint whose old path is now empty.
-                #
-                # The emptiness is tested against the filesystem rather than
-                # the `missing` flag: within a single scan, rows are only
-                # flagged after every file has been processed, so a file
-                # that moved since the last scan would still look present
-                # here and we would create a duplicate row instead.
+                # A moved file keeps its row: relink one with the same
+                # fingerprint whose old path is gone. Checked on disk, as
+                # `missing` is only set after the whole scan.
                 candidates = conn.execute(
                     "SELECT * FROM scores WHERE content_key = ? "
                     "ORDER BY missing DESC, last_opened DESC",

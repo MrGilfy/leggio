@@ -1,13 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Thumbnail generation and auto-crop detection, on a worker thread.
 
-These run together because both need the document open and both are wanted
-at the same moment: the thumbnail looks better cropped, and the crop is
-needed by the viewer later anyway. Doing them in one pass means each PDF is
-opened once.
-
-This worker is deliberately separate from the viewer's render thread. A
-first-run scan of a large library must never be able to stall a page turn.
+Both need the document open, so each PDF is opened once for both. Kept off
+the render thread so a first-run scan never stalls a page turn.
 """
 
 from __future__ import annotations
@@ -155,9 +150,7 @@ class ThumbnailWorker:
         detected = None
         if needs_crop:
             detected = detect_crop(document, max(1, score.page_count))
-            # Persist even a None result by leaving crop NULL but clearing
-            # crop_auto would lose future re-detection; instead only write
-            # when something was actually found.
+            # Write only a found crop, so a miss is retried next time.
             if detected is not None:
                 self.db.set_crop(score.id, detected, auto=True)
                 crop = detected

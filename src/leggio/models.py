@@ -121,15 +121,11 @@ class Score:
 class Annotation:
     """One pen stroke or one stamped symbol.
 
-    Geometry lives in page space: fractions of the *uncropped, unrotated*
-    page, the same space crop rectangles use. Everything the viewer does to
-    the page - crop, rotate, zoom, resize, two-page spread - is a transform
-    applied at draw time, so an annotation never drifts off the note it was
-    put against.
+    Geometry is in page space (fractions of the uncropped, unrotated page), so
+    crop, rotation, zoom and spread are draw-time transforms.
 
-    `data` is:
-      ink     {"points": [[x, y], ...]}
-      symbol  {"glyph": "fermata", "x": .., "y": .., "size": ..}
+    `data` is {"points": [[x, y], ...]} for ink, and
+    {"glyph", "x", "y", "size"[, "span"][, "label"]} for symbols.
     """
 
     id: int

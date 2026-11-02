@@ -32,8 +32,7 @@ ICONS_PATH = Path(__file__).parent / "ui" / "icons"
 
 
 class AppContext:
-    """Everything the pages need, in one object, so views don't reach into
-    the application singleton."""
+    """What the pages need, so they don't reach into the application."""
 
     def __init__(self, window: "LeggioWindow"):
         self.window = window
@@ -75,37 +74,6 @@ class AppContext:
 
     def open_score(self, score: Score) -> None:
         self.window.open_score(score)
-
-    def open_path(self, path: Path) -> None:
-        """Open a PDF given on the command line or by a file manager."""
-        try:
-            path = path.expanduser().resolve()
-        except OSError:
-            pass
-        if not path.is_file():
-            self.toast(f"File not found: {path}")
-            return
-
-        score = next(
-            (s for s in self.db.all_scores() if s.path == str(path)), None
-        )
-        if score is None:
-            # Not in a scanned folder: index it anyway so it behaves like
-            # any other score, reading position included.
-            score_id = index_file(self.db, path)
-            if score_id is None:
-                self.toast(f"Could not open {path.name}")
-                return
-            score = self.db.get_score(score_id)
-            self.library.reload()
-        elif score.missing:
-            # Scans flag files outside the library folders as missing, but
-            # this one is right here.
-            self.db.update_score(score.id, missing=False)
-            score.missing = False
-            self.library.reload()
-        if score is not None:
-            self.open_score(score)
 
     def open_setlist(self, setlist_id: int, scores: list[Score]) -> None:
         self.window.open_setlist(setlist_id, scores)

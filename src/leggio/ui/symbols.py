@@ -1,21 +1,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Musical symbols, drawn as cairo paths.
 
-Deliberately not text glyphs. The Unicode musical blocks (U+1D1xx, which is
-where segno and coda live) are missing from most system fonts, and cairo's
-toy text API does no font fallback, so anything drawn as a character risks
-coming out as an empty box on a machine without a music font. Paths always
-render. The exceptions are the markings that genuinely *are* lettering in
-engraved music - dynamics, tempo words, D.C./D.S. - which are plain ASCII
-in a stock serif face.
+Paths, not text glyphs: the Unicode music blocks are missing from most fonts
+and cairo's toy text API has no fallback. Markings that are lettering in
+engraved music (dynamics, tempo words, D.C./D.S.) use a serif face.
 
-Two shapes of symbol:
-
-  POINT  centred on (x, y) at a given size - articulations, accidentals,
-         dynamics, navigation marks.
-  SPAN   drawn from x to x+span - slurs, ties, hairpins, voltas, 8va. These
-         have no meaningful fixed size: a slur is however long the phrase
-         is, so the viewer draws them by dragging.
+Point symbols are centred on (x, y) at a given size. Span symbols (slurs,
+ties, hairpins, voltas, 8va) run from x to x + span and are placed by
+dragging.
 """
 
 from __future__ import annotations
@@ -24,9 +16,6 @@ import math
 from typing import Callable, Optional
 
 import cairo
-
-SPAN = "span"
-POINT = "point"
 
 # Glyphs whose whole point is their length.
 SPAN_GLYPHS = {
@@ -471,9 +460,8 @@ _SPAN_DRAW: dict[str, Callable] = {
 }
 
 
-# The palette, grouped the way a musician would look for them. Navigation
-# sits high up because those are the marks that derail a whole performance
-# when misread, not just one note.
+# The palette, grouped as a musician looks for them. Navigation comes first:
+# a misread repeat derails a whole performance.
 CATEGORIES: list[tuple[str, list[tuple[str, str]]]] = [
     ("Navigation", [
         ("segno", "Segno"), ("coda", "Coda"),
@@ -535,9 +523,8 @@ def draw_symbol(ctx, glyph: str, cx: float, cy: float, size: float,
     if handler is None:
         return
     ctx.save()
-    # Start from a clean path. cairo save/restore does not cover the path,
-    # so a caller that left a current point behind (show_text does) would
-    # otherwise get a stray line drawn from it into our first arc.
+    # save/restore does not cover the path; drop any current point a caller
+    # (show_text, say) left behind.
     ctx.new_path()
     ctx.set_line_cap(cairo.LineCap.ROUND)
     ctx.set_line_join(cairo.LineJoin.ROUND)
