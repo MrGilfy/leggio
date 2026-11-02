@@ -98,6 +98,12 @@ class AppContext:
                 return
             score = self.db.get_score(score_id)
             self.library.reload()
+        elif score.missing:
+            # Scans flag files outside the library folders as missing, but
+            # this one is right here.
+            self.db.update_score(score.id, missing=False)
+            score.missing = False
+            self.library.reload()
         if score is not None:
             self.open_score(score)
 
@@ -192,6 +198,12 @@ class LeggioWindow(Adw.ApplicationWindow):
                 self.toast(f"Could not open {path.name}")
                 return
             score = self.db.get_score(score_id)
+            self.library.reload()
+        elif score.missing:
+            # Scans flag files outside the library folders as missing, but
+            # this one is right here.
+            self.db.update_score(score.id, missing=False)
+            score.missing = False
             self.library.reload()
         if score is not None:
             self.open_score(score)
