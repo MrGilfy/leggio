@@ -119,13 +119,14 @@ class Score:
 
 @dataclass
 class Annotation:
-    """One pen stroke or one stamped symbol.
+    """One pen stroke, one stamped symbol, or one jump link.
 
     Geometry is in page space (fractions of the uncropped, unrotated page), so
     crop, rotation, zoom and spread are draw-time transforms.
 
     `data` is {"points": [[x, y], ...]} for ink, and
-    {"glyph", "x", "y", "size"[, "span"][, "label"]} for symbols.
+    {"glyph", "x", "y", "size"[, "span"][, "label"]} for symbols. A link's
+    page is its source page; see links.py for its data.
     """
 
     id: int
@@ -139,6 +140,7 @@ class Annotation:
 
     INK = "ink"
     SYMBOL = "symbol"
+    LINK = "link"
 
     def encoded_data(self) -> str:
         return json.dumps(self.data, separators=(",", ":"))

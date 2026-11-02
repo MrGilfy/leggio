@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Annotation mode for the viewer: ink, highlighter, symbols, eraser."""
+"""Annotation mode for the viewer: ink, highlighter, symbols, links, eraser."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ class AnnotateModeMixin:
 
     def _init_annotate_mode(self) -> None:
         self.annotate_mode = False
-        self.tool = "pen"                 # pen | highlighter | symbol | eraser
+        self.tool = "pen"         # pen | highlighter | symbol | link | eraser
         self.pen_color = PEN_COLORS[0][0]
         self.pen_width = PEN_WIDTHS[1][0]
         self.symbol_glyph = "fermata"
@@ -43,7 +43,10 @@ class AnnotateModeMixin:
 
     def _annotate_key(self, keyval: int) -> bool:
         if keyval == Gdk.KEY_Escape:
-            self.exit_annotate_mode()
+            if self.placing_link:
+                self.cancel_link()
+            else:
+                self.exit_annotate_mode()
             return True
         # Page turns still work, so a pedal keeps advancing the score
         # while a pen is in your other hand.
@@ -55,7 +58,7 @@ class AnnotateModeMixin:
             self.turn(1)
             return True
         for key, tool in ((Gdk.KEY_p, "pen"), (Gdk.KEY_e, "eraser"),
-                          (Gdk.KEY_s, "symbol")):
+                          (Gdk.KEY_s, "symbol"), (Gdk.KEY_l, "link")):
             if keyval == key:
                 self.set_tool(tool)
                 return True
@@ -73,6 +76,7 @@ class AnnotateModeMixin:
 
     def _reload_annotations(self, page: int) -> None:
         self._annotations.pop((self.score.id, page), None)
+        self._forget_score_links()
 
     def _page_to_screen(self, u, v, x, y, w, h) -> tuple[float, float]:
         return geometry.page_to_screen(u, v, (x, y, w, h), self.rotation, self.crop)
@@ -150,6 +154,8 @@ class AnnotateModeMixin:
         ctx.restore()
 
     def _draw_annotation(self, ctx, annotation, x, y, w, h, unit) -> None:
+        if annotation.kind == Annotation.LINK:
+            return  # drawn as a marker by link_mode, on top of everything
         if annotation.kind == Annotation.SYMBOL:
             data = annotation.data
             ctx.set_source_rgba(*self._rgba(annotation.color))
@@ -252,6 +258,8 @@ class AnnotateModeMixin:
         if self.tool == "eraser":
             self._eraser_pos = (page, u, v)
             self._erase_at(page, u, v, ERASER_RADIUS / self._page_unit(w))
+        elif self.tool == "link":
+            self._link_press(page, u, v)
         elif self.tool == "symbol":
             glyph = self.symbol_glyph
             if is_span(glyph):
@@ -401,7 +409,17 @@ class AnnotateModeMixin:
     def _erase_at(self, page: int, u: float, v: float, radius: float) -> None:
         """Erase whole strokes: predictable at arm's length, one undo step each."""
         hits = []
+        # A link goes when either end is rubbed out; its target may sit on
+        # this page while the link itself belongs to another.
+        for row, link in self._links_targeting(page):
+            if math.hypot(u - link.tx, v - link.ty) <= radius:
+                hits.append(row)
         for annotation in self._annotations_for(page):
+            if annotation.kind == Annotation.LINK:
+                data = annotation.data
+                if math.hypot(u - data.get("x", -1), v - data.get("y", -1)) <= radius:
+                    hits.append(annotation)
+                continue
             if annotation.kind == Annotation.SYMBOL:
                 data = annotation.data
                 reach = max(radius, data.get("size", 0.05) * 0.6)
@@ -430,8 +448,10 @@ class AnnotateModeMixin:
 
         if not hits:
             return
+        hits = list({a.id: a for a in hits}.values())
         self.ctx.db.delete_annotations([a.id for a in hits])
-        self._reload_annotations(page)
+        for hit_page in {page, *(a.page for a in hits)}:
+            self._reload_annotations(hit_page)
         self._undo_stack.append(("remove", hits))
         self._sync_annotate_bar()
 
@@ -451,6 +471,7 @@ class AnnotateModeMixin:
         self.area.queue_draw()
 
     def exit_annotate_mode(self) -> None:
+        self.cancel_link()
         self.annotate_mode = False
         self._stroke = None
         self._eraser_pos = None
@@ -462,6 +483,8 @@ class AnnotateModeMixin:
         self.area.queue_draw()
 
     def set_tool(self, tool: str) -> None:
+        if tool != "link":
+            self.cancel_link()
         self.tool = tool
         self._sync_annotate_bar()
 
@@ -481,6 +504,7 @@ class AnnotateModeMixin:
             for annotation in payload:
                 annotation.id = self.ctx.db.add_annotation(annotation)
         self._annotations.clear()
+        self._forget_score_links()
         self._sync_annotate_bar()
         self.area.queue_draw()
 
@@ -503,3 +527,4 @@ class AnnotateModeMixin:
             width=self.pen_width,
             can_undo=bool(self._undo_stack),
         )
+        self._sync_back()

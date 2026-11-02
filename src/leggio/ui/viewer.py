@@ -6,7 +6,8 @@ height, so half-page turns stay exact at any zoom or window size; it is what
 last_page/last_offset store. A half-page turn adds 0.5, showing the bottom
 of one page above the top of the next.
 
-Annotation and crop editing live in annotate_mode.py and crop_mode.py.
+Annotation and crop editing live in annotate_mode.py and crop_mode.py,
+jump links in link_mode.py.
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ from ..render import PRIORITY_PREFETCH, make_key
 from .annotate_mode import AnnotateModeMixin
 from .controls import AnnotateBar, ControlBar, CropBar
 from .crop_mode import CropModeMixin
+from .link_mode import LinkModeMixin
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +46,8 @@ def _normalise_fit(value: object) -> str:
     return "width" if value == "width" else "page"
 
 
-class ViewerPage(AnnotateModeMixin, CropModeMixin, Adw.NavigationPage):
+class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
+                 Adw.NavigationPage):
     """One score, or a setlist paged through end to end."""
 
     __gtype_name__ = "LeggioViewerPage"
@@ -86,6 +89,7 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, Adw.NavigationPage):
 
         self._init_annotate_mode()
         self._init_crop_mode()
+        self._init_link_mode()
 
         self._key_controller: Optional[Gtk.EventControllerKey] = None
 
@@ -142,6 +146,8 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, Adw.NavigationPage):
         overlay.set_child(self.area)
         overlay.add_overlay(self.status)
         overlay.add_overlay(self.overlay_revealer)
+        for widget in self._build_link_widgets():
+            overlay.add_overlay(widget)
 
         self.set_child(overlay)
 
@@ -206,6 +212,7 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, Adw.NavigationPage):
             if source:
                 GLib.source_remove(source)
         self._resize_source = self._overlay_source = 0
+        self._stop_flash()
 
     def close_viewer(self) -> None:
         self.ctx.navigation.pop()
@@ -326,6 +333,7 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, Adw.NavigationPage):
         ctx.paint()
         # Reset first, so an early return never leaves another score's pages.
         self._drawn_pages = []
+        self._link_spots = []
 
         if self._info() is None:
             return
@@ -423,6 +431,7 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, Adw.NavigationPage):
 
         self._page_rects.append((page, x, y, width, height))
         self._draw_annotations(ctx, page, x, y, width, height)
+        self._draw_links(ctx, page, x, y, width, height, len(self._page_rects) - 1)
 
     def _apply_night(self, ctx, x: float, y: float,
                      width: float, height: float) -> None:
@@ -497,6 +506,7 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, Adw.NavigationPage):
             self.offset = 0.0
             self._settle_page()
         self.pan_x = 0.0
+        self.back_state.turned()
         self.area.queue_draw()
         self._sync_controls()
         self._schedule_save()
@@ -669,6 +679,7 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, Adw.NavigationPage):
             night=self.night,
             spread=self._spread_active(width, height),
         )
+        self._sync_back()
 
     # ------------------------------------------------------------ persistence
 
@@ -776,6 +787,12 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, Adw.NavigationPage):
         if keyval in (Gdk.KEY_m, Gdk.KEY_M):
             self.toggle_overlay()
             return True
+        if keyval in (Gdk.KEY_j, Gdk.KEY_J):
+            self.follow_first_link()
+            return True
+        if keyval in (Gdk.KEY_b, Gdk.KEY_B):
+            self.jump_back()
+            return True
         return False
 
     # -------------------------------------------------------------- gestures
@@ -790,6 +807,9 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, Adw.NavigationPage):
     def _resolve_tap(self, x: float, y: float) -> bool:
         if self._suppress_tap:
             self._suppress_tap = False
+            return False
+        # A link marker wins over the tap zones, but only inside the marker.
+        if self.link_tap(x, y):
             return False
         if not self.tap_zones:
             self.toggle_overlay()

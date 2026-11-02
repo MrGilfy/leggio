@@ -8,6 +8,7 @@ import sqlite3
 import pytest
 
 from leggio.db import SCHEMA, SCHEMA_VERSION, Database
+from leggio.links import Link, make_link
 from leggio.models import Annotation, CropRect
 
 
@@ -254,6 +255,39 @@ def test_clear_annotations_ignores_repeated_pages(db, tmp_path):
     score_id, _ = scan(db, tmp_path / "a.pdf")
     db.add_annotation(ink(score_id, 1))
     assert len(db.clear_annotations(score_id, 1, 1)) == 1
+
+
+def test_links_are_annotations(db, tmp_path):
+    score_id, _ = scan(db, tmp_path / "a.pdf")
+    other_id, _ = scan(db, tmp_path / "b.pdf")
+    db.add_annotation(ink(score_id, 3))
+    first = db.add_annotation(make_link(score_id, 3, 0.8, 0.9, 1, 0.1, 0.2))
+    second = db.add_annotation(make_link(score_id, 0, 0.5, 0.5, 4, 0.5, 0.1))
+    db.add_annotation(make_link(other_id, 0, 0.5, 0.5, 1, 0.5, 0.5))
+
+    rows = db.links_for(score_id)
+    assert [r.id for r in rows] == [second, first]       # by source page
+    assert Link.from_annotation(rows[1]).target_page == 1
+    # A link lives on its source page, next to that page's ink.
+    assert len(db.annotations_for(score_id, 3)) == 2
+
+
+def test_clearing_a_page_removes_links_starting_there(db, tmp_path):
+    score_id, _ = scan(db, tmp_path / "a.pdf")
+    db.add_annotation(make_link(score_id, 3, 0.8, 0.9, 1, 0.1, 0.2))
+    removed = db.clear_annotations(score_id, 3)
+    assert [r.kind for r in removed] == ["link"]
+    assert db.links_for(score_id) == []
+    for row in removed:                                  # what undo does
+        db.add_annotation(row)
+    assert len(db.links_for(score_id)) == 1
+
+
+def test_forgetting_a_score_drops_its_links(db, tmp_path):
+    score_id, _ = scan(db, tmp_path / "a.pdf")
+    db.add_annotation(make_link(score_id, 0, 0.5, 0.5, 2, 0.5, 0.5))
+    db.forget_score(score_id)
+    assert db.links_for(score_id) == []
 
 
 def test_delete_annotations(db, tmp_path):
