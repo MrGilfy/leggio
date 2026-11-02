@@ -231,6 +231,31 @@ def test_clear_annotations_returns_what_it_removed(db, tmp_path):
     assert len(db.annotations_for(score_id, 1)) == 1
 
 
+def test_clear_annotations_on_several_pages_restores_as_one(db, tmp_path):
+    # A two-page spread or half-page view shows two pages; clearing the
+    # screen removes both, and re-adding what was returned (which is what
+    # undo does) brings both back.
+    score_id, _ = scan(db, tmp_path / "a.pdf")
+    for page in (2, 2, 3, 4):
+        db.add_annotation(ink(score_id, page))
+    removed = db.clear_annotations(score_id, 2, 3)
+    assert sorted(a.page for a in removed) == [2, 2, 3]
+    assert db.annotations_for(score_id, 2) == []
+    assert db.annotations_for(score_id, 3) == []
+    assert len(db.annotations_for(score_id, 4)) == 1
+
+    for annotation in removed:
+        db.add_annotation(annotation)
+    assert len(db.annotations_for(score_id, 2)) == 2
+    assert len(db.annotations_for(score_id, 3)) == 1
+
+
+def test_clear_annotations_ignores_repeated_pages(db, tmp_path):
+    score_id, _ = scan(db, tmp_path / "a.pdf")
+    db.add_annotation(ink(score_id, 1))
+    assert len(db.clear_annotations(score_id, 1, 1)) == 1
+
+
 def test_delete_annotations(db, tmp_path):
     score_id, _ = scan(db, tmp_path / "a.pdf")
     keep = db.add_annotation(ink(score_id, 0))

@@ -485,10 +485,14 @@ class AnnotateModeMixin:
         self.area.queue_draw()
 
     def annotation_clear_page(self) -> None:
-        removed = self.ctx.db.clear_annotations(self.score.id, self.page)
+        """Clear every page on screen: both halves of a spread, or the two
+        pages a half-page view shows. One undo step restores them all."""
+        pages = list(self._drawn_pages) or [self.page]
+        removed = self.ctx.db.clear_annotations(self.score.id, *pages)
         if removed:
             self._undo_stack.append(("remove", removed))
-        self._reload_annotations(self.page)
+        for page in pages:
+            self._reload_annotations(page)
         self._sync_annotate_bar()
         self.area.queue_draw()
 
