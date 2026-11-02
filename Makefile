@@ -19,7 +19,10 @@ DESTDIR ?=
 PYTHON  ?= python3
 INSTALL ?= install
 
-APPID   := io.github.MrGilfy.Leggio
+APPID   := io.github.mrgilfy.leggio
+# The ID before 0.4.0. Its files are removed on install, so an upgrade from
+# source does not leave a second launcher behind.
+OLDID   := io.github.MrGilfy.Leggio
 VERSION := $(shell $(PYTHON) -c "import re, pathlib; \
 	print(re.search(r'__version__ = \"([^\"]+)\"', \
 	pathlib.Path('src/leggio/__init__.py').read_text()).group(1))")
@@ -71,6 +74,10 @@ install:
 	chmod 755 $(bindir)/leggio
 
 	# --- freedesktop metadata ---
+	rm -f $(appsdir)/$(OLDID).desktop $(metainfodir)/$(OLDID).metainfo.xml \
+		$(iconsdir)/scalable/apps/$(OLDID).svg \
+		$(iconsdir)/128x128/apps/$(OLDID).png \
+		$(iconsdir)/256x256/apps/$(OLDID).png
 	$(INSTALL) -Dm644 data/$(APPID).desktop $(appsdir)/$(APPID).desktop
 	$(INSTALL) -Dm644 data/$(APPID).metainfo.xml \
 		$(metainfodir)/$(APPID).metainfo.xml
@@ -85,8 +92,8 @@ install:
 uninstall:
 	rm -rf $(libdir)
 	rm -f $(bindir)/leggio
-	rm -f $(appsdir)/$(APPID).desktop
-	rm -f $(metainfodir)/$(APPID).metainfo.xml
+	rm -f $(appsdir)/$(APPID).desktop $(appsdir)/$(OLDID).desktop
+	rm -f $(metainfodir)/$(APPID).metainfo.xml $(metainfodir)/$(OLDID).metainfo.xml
 	rm -f $(iconsdir)/scalable/apps/$(APPID).svg
 	rm -f $(iconsdir)/128x128/apps/$(APPID).png
 	rm -f $(iconsdir)/256x256/apps/$(APPID).png

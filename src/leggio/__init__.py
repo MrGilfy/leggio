@@ -2,4 +2,4 @@
 """Leggio - a sheet music viewer for Linux."""
 
 __version__ = "0.3.0"
-APP_ID = "io.github.MrGilfy.Leggio"
+APP_ID = "io.github.mrgilfy.leggio"

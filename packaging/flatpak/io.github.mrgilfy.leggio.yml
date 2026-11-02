@@ -10,7 +10,7 @@
 # It does not ship poppler-glib, so poppler is built here with only the GLib
 # bindings and their introspection data enabled.
 
-id: io.github.MrGilfy.Leggio
+id: io.github.mrgilfy.leggio
 runtime: org.gnome.Platform
 runtime-version: "51"
 sdk: org.gnome.Sdk

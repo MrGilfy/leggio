@@ -18,7 +18,7 @@ The version lives only in `src/leggio/__init__.py`.
 
 1. Set `__version__` and check it with `make version`.
 2. Add a `<release version="X.Y.Z" date="YYYY-MM-DD">` block at the top of
-   `<releases>` in `data/io.github.MrGilfy.Leggio.metainfo.xml`. App stores
+   `<releases>` in `data/io.github.mrgilfy.leggio.metainfo.xml`. App stores
    show these notes, so write them for users, not as a list of commits.
 3. Run the checks above.
 4. Commit, tag and push. The tag is `v` plus the exact version:
@@ -52,7 +52,7 @@ git push origin :refs/tags/vX.Y.Z
 
 ## Flatpak
 
-The manifest is `packaging/flatpak/io.github.MrGilfy.Leggio.yml`. It is a
+The manifest is `packaging/flatpak/io.github.mrgilfy.leggio.yml`. It is a
 self-hosted bundle attached to each release, not a Flathub app. To build,
 install and bundle it locally:
 
@@ -60,7 +60,7 @@ install and bundle it locally:
 sudo dnf install flatpak-builder          # or your distribution's package
 flatpak install flathub org.gnome.Sdk//51
 make flatpak                              # writes build/leggio-X.Y.Z.flatpak
-flatpak run io.github.MrGilfy.Leggio
+flatpak run io.github.mrgilfy.leggio
 ```
 
 The GNOME runtime has no poppler-glib, so the manifest builds poppler and
