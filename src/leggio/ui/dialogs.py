@@ -98,9 +98,8 @@ class MetadataDialog(Adw.Dialog):
         composer = self.composer_row.get_text().strip() or None
 
         fields: dict = {"title": title}
-        # A title that differs from the cleaned-up filename is the user's
-        # own; lock it so a rescan cannot overwrite it. Typing the filename
-        # back in releases the lock again, which is what "reset" does.
+        # A title other than the cleaned filename is the user's: lock it
+        # against rescans. Typing the filename back in (reset) unlocks it.
         fields["title_locked"] = title != default_title
         if composer != self.score.composer:
             fields["composer"] = composer

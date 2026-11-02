@@ -1,14 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Whitespace margin detection.
 
-Sheet music PDFs are typically 60-70% margin by area. Trimming that is the
-single largest readability win on a fixed-size screen, so it runs
-automatically at scan time.
-
-Method: render a few sample pages small (~200px wide) onto opaque white,
-then find the bounding box of everything that is not white. The pixel scan
-is done with memoryview.cast('I') so the per-row minimum is one C-level
-min() call rather than a Python loop over pixels.
+Renders a few sample pages ~200px wide onto white and takes the bounding box
+of everything that is not white. Rows are scanned via memoryview.cast("I")
+so each row minimum is a single C-level min().
 """
 
 from __future__ import annotations
@@ -47,9 +42,8 @@ def _page_ink_bbox(page) -> Optional[tuple[float, float, float, float]]:
 
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
     ctx = cairo.Context(surface)
-    # Opaque white: with ARGB32 a blank pixel is then exactly 0xFFFFFFFF,
-    # which makes the threshold comparison meaningful. (FORMAT_RGB24 leaves
-    # the top byte undefined, so it cannot be compared this way.)
+    # Opaque white, so a blank ARGB32 pixel is exactly 0xFFFFFFFF (RGB24
+    # leaves the top byte undefined).
     ctx.set_source_rgb(1, 1, 1)
     ctx.paint()
     ctx.scale(scale, scale)
@@ -110,11 +104,9 @@ def sample_pages(page_count: int, limit: int = 5) -> list[int]:
 
 
 def detect_crop(document, page_count: int, limit: int = 5) -> Optional[CropRect]:
-    """Union of the ink bounding boxes of a sample of pages.
+    """Union of the ink boxes of sampled pages.
 
-    Union, not intersection or average: a title page with a wide header and
-    a final page holding one short system must both stay fully visible. The
-    union is the only direction that cannot cut notation off.
+    A union, so neither a wide title header nor a short last system is cut.
     """
     boxes: list[CropRect] = []
     for index in sample_pages(page_count, limit):

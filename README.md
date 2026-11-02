@@ -21,6 +21,8 @@ It runs on Linux. It only reads your PDF files — it never changes them.
 - Lets you draw on a score with a pen, highlighter and eraser, and add
   musical symbols like dynamics, segno, coda and volta brackets. Your
   marks stay in the right place when you zoom or rotate.
+- Night mode turns the page white-on-black for dark stages. Leggio
+  remembers it for each score.
 - A setlist reads as one long document, so you page from the end of one
   score straight into the next.
 - Remembers where you stopped in each score, and keeps the screen from
@@ -67,6 +69,17 @@ To try it without installing:
 PYTHONPATH=src python3 -m leggio
 ```
 
+## Opening a PDF directly
+
+Open a PDF with Leggio from your file manager, or from a terminal:
+
+```sh
+leggio score.pdf
+```
+
+It opens fullscreen straight away. Files outside your library folders work
+too, and Leggio remembers where you stopped in them.
+
 ## Controls
 
 | | |
@@ -86,6 +99,8 @@ PYTHONPATH=src python3 -m leggio
 | `R` | Rotate 90° |
 | `F` | Whole page / fit to width |
 | `H` | Half-page turns |
+| `N` | Night mode |
+| `M` | Show or hide the controls |
 | `+` `-` `0` | Zoom in, out, reset |
 | `Esc` | Go back |
 
@@ -106,6 +121,15 @@ music scanning and no cloud sync.
 
 Bug reports and pull requests are welcome on
 [GitHub](https://github.com/MrGilfy/leggio/issues).
+
+The checks CI runs need ruff, pytest and pycairo, plus the GTK packages
+above for the start-up test:
+
+```sh
+ruff check src tests
+python3 -m pytest
+xvfb-run -a python3 tests/smoke.py
+```
 
 For maintainers: [RELEASING.md](RELEASING.md) explains how to make a
 release, and [SUBMITTING.md](SUBMITTING.md) how to update the AUR

@@ -17,12 +17,7 @@ SORT_LABELS = ("Title", "Composer", "Date added", "Last opened")
 
 
 class ScoreObject(GObject.Object):
-    """Thin GObject box around a Score dataclass.
-
-    The grid holds these; the `changed` signal lets a recycled card refresh
-    itself when a thumbnail lands or the user edits metadata, without
-    rebuilding the model.
-    """
+    """GObject wrapper for a Score; `changed` lets a recycled card refresh."""
 
     __gtype_name__ = "LeggioScoreObject"
     __gsignals__ = {"changed": (GObject.SignalFlags.RUN_FIRST, None, ())}
@@ -101,11 +96,6 @@ class LibraryStore:
     def n_visible(self) -> int:
         return self.sorted.get_n_items()
 
-    def visible_scores(self) -> list[Score]:
-        return [
-            self.sorted.get_item(i).score for i in range(self.sorted.get_n_items())
-        ]
-
     # -------------------------------------------------------------- filters
 
     def set_query(self, text: str) -> None:
@@ -123,9 +113,8 @@ class LibraryStore:
     def _refilter(self) -> None:
         self.filter.changed(Gtk.FilterChange.DIFFERENT)
 
-    # GTK invokes these with a trailing user_data argument. Absorbing it
-    # matters: an exception here is swallowed into a stderr traceback and
-    # the model silently falls back to insertion order.
+    # GTK passes a trailing user_data; failing on it would silently leave
+    # the model in insertion order.
     def _match(self, obj: ScoreObject, *_user_data) -> bool:
         score = obj.score
         if self._mode == "missing":

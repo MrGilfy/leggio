@@ -28,6 +28,7 @@ class LibraryPage(Adw.NavigationPage):
         super().__init__(title="Leggio")
         self.ctx = ctx
         self.store = LibraryStore()
+        self._last_scan_toast: Optional[Adw.Toast] = None
         self._context_popover: Optional[Gtk.PopoverMenu] = None
         self._context_score: Optional[Score] = None
         self._setlist_popover: Optional[Gtk.PopoverMenu] = None
@@ -83,9 +84,8 @@ class LibraryPage(Adw.NavigationPage):
             row = Adw.ActionRow(title=title)
             row.add_prefix(Gtk.Image.new_from_icon_name(icon))
             self.views_list.append(row)
-        # Only meaningful once something has actually gone missing; hidden
-        # otherwise so it is not a permanent unexplained entry. Hiding keeps
-        # the row's index, which _on_view_selected maps to a filter mode.
+        # Shown only once something is missing. Hidden, not removed, so the
+        # row index _on_view_selected maps to a filter stays put.
         self.missing_row = self.views_list.get_row_at_index(2)
         self.missing_row.set_visible(False)
         self.views_list.connect("row-selected", self._on_view_selected)
@@ -247,9 +247,7 @@ class LibraryPage(Adw.NavigationPage):
         card = list_item.get_child()
         obj = list_item.get_item()
         card.bind(obj)
-        # Thumbnails are requested only for items the grid actually binds,
-        # so scrolling drives the work instead of the whole library queueing
-        # up front.
+        # Thumbnails are requested as cards bind, so scrolling drives the work.
         if obj.thumb is None and not obj.score.missing:
             self.ctx.thumbs.request(obj.score, self._on_thumb_ready)
 
@@ -535,7 +533,7 @@ class LibraryPage(Adw.NavigationPage):
     def start_scan(self) -> None:
         directories = self.ctx.config.directories
         if not directories:
-            self.ctx.toast("No library folders configured")
+            self._scan_toast("No library folders configured")
             return
         started = self.ctx.scanner.start(
             directories,
@@ -547,7 +545,7 @@ class LibraryPage(Adw.NavigationPage):
             self.progress.set_fraction(0.0)
             self.progress_revealer.set_reveal_child(True)
         else:
-            self.ctx.toast("A scan is already running")
+            self._scan_toast("A scan is already running")
 
     def _on_scan_progress(self, done: int, total: int, name: str) -> None:
         if total:
@@ -559,7 +557,7 @@ class LibraryPage(Adw.NavigationPage):
         self.reload()
 
         if result.cancelled:
-            self.ctx.toast("Scan cancelled")
+            self._scan_toast("Scan cancelled")
             return
 
         parts = []
@@ -573,4 +571,16 @@ class LibraryPage(Adw.NavigationPage):
             parts.append(f"{len(result.unreadable)} unreadable")
         if not parts:
             parts.append(f"{result.found} scores, nothing changed")
-        self.ctx.toast("Scan complete — " + ", ".join(parts))
+        self._scan_toast("Scan complete — " + ", ".join(parts))
+
+    def _scan_toast(self, message: str) -> None:
+        # Scans run in the background; their news never covers a score.
+        if self.ctx.viewer_open:
+            return
+        self.dismiss_scan_toast()
+        self._last_scan_toast = self.ctx.toast(message)
+
+    def dismiss_scan_toast(self) -> None:
+        if self._last_scan_toast is not None:
+            self._last_scan_toast.dismiss()
+            self._last_scan_toast = None

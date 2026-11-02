@@ -28,11 +28,11 @@ from .ui.viewer import ViewerPage
 log = logging.getLogger(__name__)
 
 STYLE_PATH = Path(__file__).parent / "ui" / "style.css"
+ICONS_PATH = Path(__file__).parent / "ui" / "icons"
 
 
 class AppContext:
-    """Everything the pages need, in one object, so views don't reach into
-    the application singleton."""
+    """What the pages need, so they don't reach into the application."""
 
     def __init__(self, window: "LeggioWindow"):
         self.window = window
@@ -65,36 +65,15 @@ class AppContext:
     def inhibitor(self) -> IdleInhibitor:
         return self.window.inhibitor
 
-    def toast(self, message: str) -> None:
-        self.window.toast(message)
+    @property
+    def viewer_open(self) -> bool:
+        return self.window.viewer_open
+
+    def toast(self, message: str) -> Adw.Toast:
+        return self.window.toast(message)
 
     def open_score(self, score: Score) -> None:
         self.window.open_score(score)
-
-    def open_path(self, path: Path) -> None:
-        """Open a PDF given on the command line or by a file manager."""
-        try:
-            path = path.expanduser().resolve()
-        except OSError:
-            pass
-        if not path.is_file():
-            self.toast(f"File not found: {path}")
-            return
-
-        score = next(
-            (s for s in self.db.all_scores() if s.path == str(path)), None
-        )
-        if score is None:
-            # Not in a scanned folder: index it anyway so it behaves like
-            # any other score, reading position included.
-            score_id = index_file(self.db, path)
-            if score_id is None:
-                self.toast(f"Could not open {path.name}")
-                return
-            score = self.db.get_score(score_id)
-            self.library.reload()
-        if score is not None:
-            self.open_score(score)
 
     def open_setlist(self, setlist_id: int, scores: list[Score]) -> None:
         self.window.open_setlist(setlist_id, scores)
@@ -134,8 +113,19 @@ class LeggioWindow(Adw.ApplicationWindow):
 
         self.connect("close-request", self._on_close)
 
-    def toast(self, message: str) -> None:
-        self.toasts.add_toast(Adw.Toast.new(message))
+    @property
+    def viewer_open(self) -> bool:
+        return isinstance(self.navigation.get_visible_page(), ViewerPage)
+
+    def toast(self, message: str) -> Adw.Toast:
+        toast = Adw.Toast.new(message)
+        self.toasts.add_toast(toast)
+        return toast
+
+    def _push_viewer(self, page: ViewerPage) -> None:
+        # A library toast must not sit on top of the score.
+        self.library.dismiss_scan_toast()
+        self.navigation.push(page)
 
     def _on_popped(self, _view, page) -> None:
         # Returning from the viewer: last-opened and any crop or rotation
@@ -153,7 +143,7 @@ class LeggioWindow(Adw.ApplicationWindow):
             self.library.reload()
             self.toast(f"File not found: {score.path}")
             return
-        self.navigation.push(ViewerPage(self.ctx, [score], score.title))
+        self._push_viewer(ViewerPage(self.ctx, [score], score.title))
 
     def open_path(self, path: Path) -> None:
         """Open a PDF given on the command line or by a file manager."""
@@ -177,6 +167,12 @@ class LeggioWindow(Adw.ApplicationWindow):
                 return
             score = self.db.get_score(score_id)
             self.library.reload()
+        elif score.missing:
+            # Scans flag files outside the library folders as missing, but
+            # this one is right here.
+            self.db.update_score(score.id, missing=False)
+            score.missing = False
+            self.library.reload()
         if score is not None:
             self.open_score(score)
 
@@ -185,7 +181,7 @@ class LeggioWindow(Adw.ApplicationWindow):
             (s for s in self.db.all_setlists() if s.id == setlist_id), None
         )
         name = setlist.name if setlist else "Setlist"
-        self.navigation.push(ViewerPage(self.ctx, scores, name))
+        self._push_viewer(ViewerPage(self.ctx, scores, name))
 
     def _on_close(self, *_args) -> bool:
         self.scanner.cancel()
@@ -226,6 +222,10 @@ class LeggioApp(Adw.Application):
         ensure_dirs()
         self.config = Config.load()
         self.db = Database(DB_PATH)
+        display = Gdk.Display.get_default()
+        if display is not None:
+            # Bundled viewer icons, so the overlay bars don't depend on the theme.
+            Gtk.IconTheme.get_for_display(display).add_search_path(str(ICONS_PATH))
         self._load_style()
 
     def do_activate(self) -> None:

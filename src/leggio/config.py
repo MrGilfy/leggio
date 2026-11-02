@@ -1,9 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """XDG paths and config.toml handling.
 
-Reading uses stdlib tomllib. Writing uses the small serialiser below rather
-than pulling in tomli-w: the config is a flat set of tables holding only
-scalars and string lists, which is a handful of lines to emit correctly.
+Reads with tomllib; writes with the small serialiser below, which covers
+flat tables of scalars and string lists.
 """
 
 from __future__ import annotations

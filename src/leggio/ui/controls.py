@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Translucent overlay bars for the viewer.
 
-Buttons are deliberately oversized. This is operated at arm's length, often
-with a hand that is about to be somewhere else, so a comfortable target
-matters more than a compact bar.
+Buttons are oversized on purpose: they are used at arm's length.
 """
 
 from __future__ import annotations
@@ -37,7 +35,7 @@ def _toggle(icon: str, tooltip: str, callback: Callable) -> Gtk.ToggleButton:
 
 
 class ControlBar(Gtk.Box):
-    """back · title · page · fit · half · spread · rotate · crop · zoom"""
+    """back · title · page · fit · half · spread · night · rotate · crop · zoom"""
 
     __gtype_name__ = "LeggioControlBar"
 
@@ -47,7 +45,7 @@ class ControlBar(Gtk.Box):
         self.viewer = viewer
         self._updating = False
 
-        self.append(_button("go-previous-symbolic", "Back to library (Esc)",
+        self.append(_button("leggio-back-symbolic", "Back to library (Esc)",
                             viewer.close_viewer))
 
         self.title = Gtk.Label(xalign=0.0)
@@ -61,37 +59,44 @@ class ControlBar(Gtk.Box):
         self.append(self.page_label)
 
         self.fit_button = _toggle(
-            "zoom-fit-best-symbolic",
+            "leggio-fit-width-symbolic",
             "Fill the width instead of fitting the whole page",
             viewer.set_fit_width,
         )
         self.append(self.fit_button)
 
         self.half_button = _toggle(
-            "view-continuous-symbolic",
+            "leggio-half-page-symbolic",
             "Half-page turns — show the next system before the turn",
             viewer.set_half_page,
         )
         self.append(self.half_button)
 
         self.spread_button = _toggle(
-            "view-dual-symbolic", "Two-page spread", viewer.set_spread
+            "leggio-spread-symbolic", "Two-page spread", viewer.set_spread
         )
         self.append(self.spread_button)
 
-        self.append(_button("object-rotate-right-symbolic",
+        self.night_button = _toggle(
+            "leggio-night-symbolic",
+            "Night mode — invert page colours (N)",
+            viewer.set_night_mode,
+        )
+        self.append(self.night_button)
+
+        self.append(_button("leggio-rotate-symbolic",
                             "Rotate 90° (R)", viewer.rotate))
-        self.append(_button("document-edit-symbolic",
+        self.append(_button("leggio-annotate-symbolic",
                             "Annotate (A)", viewer.enter_annotate_mode))
-        self.append(_button("edit-cut-symbolic",
+        self.append(_button("leggio-crop-symbolic",
                             "Adjust margin crop (C)", viewer.enter_crop_mode))
-        self.append(_button("zoom-out-symbolic", "Zoom out", viewer.zoom_out))
-        self.append(_button("zoom-original-symbolic", "Reset zoom",
+        self.append(_button("leggio-zoom-out-symbolic", "Zoom out", viewer.zoom_out))
+        self.append(_button("leggio-zoom-reset-symbolic", "Reset zoom",
                             viewer.zoom_reset))
-        self.append(_button("zoom-in-symbolic", "Zoom in", viewer.zoom_in))
+        self.append(_button("leggio-zoom-in-symbolic", "Zoom in", viewer.zoom_in))
 
     def sync(self, title: str, page_text: str, fit_width: bool,
-             half: bool, spread: bool, spread_sensitive: bool) -> None:
+             half: bool, night: bool, spread: bool) -> None:
         # Guard against the toggled handlers firing back into the viewer
         # while we are only reflecting its state.
         self._updating = True
@@ -99,6 +104,7 @@ class ControlBar(Gtk.Box):
         self.page_label.set_text(page_text)
         self.fit_button.set_active(fit_width)
         self.half_button.set_active(half)
+        self.night_button.set_active(night)
         self.spread_button.set_active(spread)
         self.half_button.set_sensitive(not spread)
         self._updating = False
@@ -149,9 +155,9 @@ class AnnotateBar(Gtk.Box):
         self.viewer = viewer
         self._updating = False
 
-        self.append(_button("pan-start-symbolic", "Previous page",
+        self.append(_button("leggio-prev-page-symbolic", "Previous page",
                             lambda: viewer.turn(-1)))
-        self.append(_button("pan-end-symbolic", "Next page",
+        self.append(_button("leggio-next-page-symbolic", "Next page",
                             lambda: viewer.turn(1)))
         self.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
 
@@ -159,7 +165,7 @@ class AnnotateBar(Gtk.Box):
         self.tool_buttons: dict[str, Gtk.ToggleButton] = {}
         first: Gtk.ToggleButton | None = None
         for tool, icon, tip in (
-            ("pen", "document-edit-symbolic", "Pen"),
+            ("pen", "leggio-annotate-symbolic", "Pen"),
             ("highlighter", None, "Highlighter"),
             ("eraser", None, "Eraser — removes a whole stroke"),
         ):
@@ -167,9 +173,7 @@ class AnnotateBar(Gtk.Box):
             if icon is not None:
                 button.set_icon_name(icon)
             else:
-                # Adwaita has no eraser or highlighter icon, so these are
-                # drawn to match the symbol palette rather than borrowing a
-                # glyph that means something else.
+                # Drawn to match the symbol palette; no stock icon fits.
                 area = Gtk.DrawingArea()
                 area.set_content_width(22)
                 area.set_content_height(22)
@@ -200,7 +204,7 @@ class AnnotateBar(Gtk.Box):
         self.append(self.symbol_button)
 
         picker = Gtk.MenuButton()
-        picker.set_icon_name("pan-down-symbolic")
+        picker.set_icon_name("leggio-expand-symbolic")
         picker.set_tooltip_text("Choose symbol")
         picker.add_css_class("viewer-button")
         picker.set_popover(self._build_symbol_popover())
@@ -244,10 +248,10 @@ class AnnotateBar(Gtk.Box):
 
         self.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
 
-        self.undo_button = _button("edit-undo-symbolic", "Undo (Ctrl+Z)",
+        self.undo_button = _button("leggio-undo-symbolic", "Undo (Ctrl+Z)",
                                    viewer.annotation_undo)
         self.append(self.undo_button)
-        self.append(_button("user-trash-symbolic", "Clear this page",
+        self.append(_button("leggio-clear-page-symbolic", "Clear this page",
                             viewer.annotation_clear_page))
 
         done = Gtk.Button(label="Done")
@@ -362,9 +366,9 @@ class CropBar(Gtk.Box):
         label.set_xalign(0.0)
         self.append(label)
 
-        self.append(_button("view-refresh-symbolic", "Detect automatically",
+        self.append(_button("leggio-autodetect-symbolic", "Detect automatically",
                             viewer.crop_autodetect))
-        self.append(_button("edit-select-all-symbolic", "Use the whole page",
+        self.append(_button("leggio-whole-page-symbolic", "Use the whole page",
                             viewer.crop_reset))
 
         cancel = Gtk.Button(label="Cancel")

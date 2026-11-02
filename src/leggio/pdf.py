@@ -1,11 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Poppler access.
 
-Everything that touches a Poppler.Document goes through here. Documents are
-never shared between threads: each worker opens its own handle for the file
-it is working on. Poppler gives no thread-safety guarantee for concurrent
-use of a single document, and the failure mode is a segfault rather than an
-exception, so this rule is not negotiable.
+Documents are never shared between threads: each worker opens its own
+handle. Concurrent use of one document can segfault.
 """
 
 from __future__ import annotations
@@ -44,12 +41,7 @@ def open_document(path: Path | str) -> Poppler.Document:
 
 
 def content_key(path: Path) -> Optional[str]:
-    """Fingerprint used to recognise a file that moved between scans.
-
-    Size plus the head of the file. Two different scores colliding on both
-    is not a realistic concern, and hashing whole multi-megabyte PDFs on
-    every scan is.
-    """
+    """Fingerprint (size + first 256 KiB) to recognise a file that moved."""
     try:
         size = path.stat().st_size
         digest = hashlib.sha256(str(size).encode("ascii"))

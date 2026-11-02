@@ -1,9 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Setlist detail: an ordered list of scores.
 
-Order is the whole point - in the viewer a setlist pages through
-end-to-end as though it were a single document - so this screen is about
-getting the sequence right.
+The viewer pages through a setlist end to end, so this screen is about
+getting the order right.
 """
 
 from __future__ import annotations

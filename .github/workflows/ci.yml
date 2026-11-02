@@ -31,6 +31,26 @@ jobs:
       - name: Byte-compile
         run: python -m compileall -q src/leggio
 
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # System Python: pycairo and the Poppler bindings come from apt.
+      - name: Install test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            python3-pytest \
+            python3-cairo \
+            python3-gi-cairo \
+            python3-gi \
+            gir1.2-poppler-0.18
+
+      - name: Run unit tests
+        run: /usr/bin/python3 -m pytest -v
+
   metadata:
     name: Freedesktop metadata
     runs-on: ubuntu-latest
@@ -93,6 +113,8 @@ jobs:
           for f in \
             usr/bin/leggio \
             usr/lib/leggio/leggio/app.py \
+            usr/lib/leggio/leggio/ui/icons/hicolor/scalable/actions/leggio-back-symbolic.svg \
+            usr/lib/leggio/leggio/ui/icons/hicolor/24x24/actions/leggio-back-symbolic.symbolic.png \
             usr/share/applications/io.github.MrGilfy.Leggio.desktop \
             usr/share/metainfo/io.github.MrGilfy.Leggio.metainfo.xml \
             usr/share/icons/hicolor/scalable/apps/io.github.MrGilfy.Leggio.svg \
