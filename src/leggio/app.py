@@ -249,22 +249,25 @@ class LeggioApp(Adw.Application):
         self._load_style()
 
     def do_activate(self) -> None:
-        if self.window is None:
-            self.window = LeggioWindow(self)
-            # Scan on first show: the library should be current without the
-            # user having to ask for it.
-            self.window.library.start_scan()
-        self.window.present()
+        self._present()
 
     def do_open(self, files, _n_files, _hint) -> None:
-        self.do_activate()
-        if self.window is None:
-            return
-        for file in files:
-            path = file.get_path()
-            if path:
-                self.window.open_path(Path(path))
-                break   # one window, one score
+        # One window, one score: the first local file wins.
+        path = next((f.get_path() for f in files if f.get_path()), None)
+        self._present(Path(path) if path else None)
+
+    def _present(self, path: Path | None = None) -> None:
+        first = self.window is None
+        if first:
+            self.window = LeggioWindow(self)
+        if path is not None:
+            # Before present(), so the viewer's fullscreen request is part of
+            # the window's initial state rather than a resize after mapping.
+            self.window.open_path(path)
+        if first:
+            # Scan on first show so the library is current without asking.
+            self.window.library.start_scan()
+        self.window.present()
 
     def do_shutdown(self) -> None:
         try:
