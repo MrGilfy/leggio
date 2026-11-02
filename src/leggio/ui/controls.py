@@ -58,6 +58,9 @@ class ControlBar(Gtk.Box):
         self.page_label.add_css_class("viewer-page")
         self.append(self.page_label)
 
+        self.append(_button("leggio-overview-symbolic", "Pages and bookmarks (G)",
+                            viewer.open_overview))
+
         self.fit_button = _toggle(
             "leggio-fit-width-symbolic",
             "Fill the width instead of fitting the whole page",

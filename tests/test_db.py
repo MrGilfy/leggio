@@ -9,7 +9,7 @@ import pytest
 
 from leggio.db import SCHEMA, SCHEMA_VERSION, Database
 from leggio.links import Link, make_link
-from leggio.models import Annotation, CropRect
+from leggio.models import Annotation, Bookmark, CropRect
 
 
 @pytest.fixture
@@ -61,6 +61,26 @@ def test_schema_2_library_gains_night_mode(tmp_path):
     assert (score.last_page, score.night_mode) == (3, False)
     db.update_score(score.id, night_mode=True)
     assert db.get_score(score.id).night_mode is True
+    db.close()
+    with sqlite3.connect(path) as conn:
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
+
+
+def test_schema_3_library_gains_bookmarks(tmp_path):
+    path = tmp_path / "library.db"
+    old_schema = SCHEMA[:SCHEMA.index("-- Named places in a score")]
+    assert "bookmarks" not in old_schema
+    with sqlite3.connect(path) as conn:
+        conn.executescript(old_schema)
+        conn.execute(
+            "INSERT INTO scores (path, title, added, last_page) "
+            "VALUES ('/a.pdf', 'A', 1.0, 3)"
+        )
+        conn.execute("PRAGMA user_version = 3")
+    db = Database(path)
+    [score] = db.all_scores()
+    db.add_bookmark(Bookmark(id=0, score_id=score.id, name="Trio", page=2))
+    assert [b.name for b in db.bookmarks_for(score.id)] == ["Trio"]
     db.close()
     with sqlite3.connect(path) as conn:
         assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
@@ -288,6 +308,66 @@ def test_forgetting_a_score_drops_its_links(db, tmp_path):
     db.add_annotation(make_link(score_id, 0, 0.5, 0.5, 2, 0.5, 0.5))
     db.forget_score(score_id)
     assert db.links_for(score_id) == []
+
+
+# --------------------------------------------------------------- bookmarks
+
+def mark(score_id, name, page, y=0.0):
+    return Bookmark(id=0, score_id=score_id, name=name, page=page, x=0.5, y=y)
+
+
+def test_bookmarks_come_in_score_order(db, tmp_path):
+    score_id, _ = scan(db, tmp_path / "a.pdf")
+    other_id, _ = scan(db, tmp_path / "b.pdf")
+    db.add_bookmark(mark(score_id, "Coda", 5))
+    db.add_bookmark(mark(score_id, "Letter B", 2, y=0.6))
+    db.add_bookmark(mark(score_id, "Trio", 2, y=0.1))
+    db.add_bookmark(mark(other_id, "Elsewhere", 0))
+    names = [b.name for b in db.bookmarks_for(score_id)]
+    assert names == ["Trio", "Letter B", "Coda"]
+
+
+def test_bookmark_names_are_trimmed_and_required(db, tmp_path):
+    score_id, _ = scan(db, tmp_path / "a.pdf")
+    bookmark_id = db.add_bookmark(mark(score_id, "  2nd movement ", 1))
+    assert db.bookmarks_for(score_id)[0].name == "2nd movement"
+    with pytest.raises(ValueError):
+        db.add_bookmark(mark(score_id, "   ", 1))
+    with pytest.raises(ValueError):
+        db.rename_bookmark(bookmark_id, "")
+
+
+def test_rename_bookmark(db, tmp_path):
+    score_id, _ = scan(db, tmp_path / "a.pdf")
+    bookmark_id = db.add_bookmark(mark(score_id, "Trio", 1))
+    db.rename_bookmark(bookmark_id, "Trio (repeat)")
+    assert db.bookmarks_for(score_id)[0].name == "Trio (repeat)"
+
+
+def test_delete_bookmark_returns_it_for_undo(db, tmp_path):
+    score_id, _ = scan(db, tmp_path / "a.pdf")
+    bookmark_id = db.add_bookmark(mark(score_id, "Trio", 3, y=0.42))
+    removed = db.delete_bookmark(bookmark_id)
+    assert db.bookmarks_for(score_id) == []
+    assert db.delete_bookmark(bookmark_id) is None
+    db.add_bookmark(removed)                     # what Undo does
+    [restored] = db.bookmarks_for(score_id)
+    assert (restored.name, restored.page, restored.y) == ("Trio", 3, 0.42)
+
+
+def test_bookmarks_survive_clearing_a_page(db, tmp_path):
+    score_id, _ = scan(db, tmp_path / "a.pdf")
+    db.add_bookmark(mark(score_id, "Trio", 1))
+    db.add_annotation(ink(score_id, 1))
+    db.clear_annotations(score_id, 1)
+    assert [b.name for b in db.bookmarks_for(score_id)] == ["Trio"]
+
+
+def test_forgetting_a_score_drops_its_bookmarks(db, tmp_path):
+    score_id, _ = scan(db, tmp_path / "a.pdf")
+    db.add_bookmark(mark(score_id, "Trio", 1))
+    db.forget_score(score_id)
+    assert db.bookmarks_for(score_id) == []
 
 
 def test_delete_annotations(db, tmp_path):

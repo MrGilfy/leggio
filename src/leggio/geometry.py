@@ -84,3 +84,15 @@ def page_unit(width: float, rotation: int, crop: Optional[CropRect]) -> float:
     """Screen pixels per unit of page width, the scale annotation sizes use."""
     box = rotate_rect(crop or FULL_PAGE, rotation)
     return width / max(box.width, 1e-9)
+
+
+def content_size(page_size: tuple[float, float], crop: Optional[CropRect],
+                 rotation: int) -> tuple[float, float]:
+    """A page's size as drawn, in points: cropped, then rotated."""
+    page_w, page_h = page_size
+    if crop is not None:
+        page_w *= crop.width
+        page_h *= crop.height
+    if rotation % 180 == 90:
+        page_w, page_h = page_h, page_w
+    return (max(page_w, 1.0), max(page_h, 1.0))

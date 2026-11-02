@@ -157,3 +157,26 @@ def test_a_new_jump_replaces_back_and_restarts_the_count():
     state.jumped((0, 6, 0.0))
     state.turned()
     assert state.take() == (0, 6, 0.0)
+
+
+# ------------------------------------------------- bookmarks share landing
+
+@pytest.mark.parametrize("rotation", [0, 90, 180, 270])
+@pytest.mark.parametrize("crop", [None, CropRect(0.1, 0.05, 0.9, 0.8)])
+@pytest.mark.parametrize("offset", [0.0, 0.25, 0.5, 0.9])
+def test_top_point_is_the_reverse_of_display_fraction(rotation, crop, offset):
+    u, v = links.top_point(offset, rotation, crop)
+    assert links.display_fraction(u, v, rotation, crop) == pytest.approx(offset)
+
+
+def test_top_point_without_offset_is_the_top_of_the_page():
+    assert links.top_point(0.0, 0, None) == (0.5, 0.0)
+    # Rotated a quarter turn, the top of the screen is the page's left edge.
+    assert links.top_point(0.0, 90, None) == pytest.approx((0.0, 0.5))
+
+
+def test_a_bookmark_lands_where_it_was_added():
+    # Added in the half-page view with page 4 scrolled halfway.
+    u, v = links.top_point(0.5, 0, None)
+    assert links.land(4, u, v, "top", rotation=0, crop=None) == (4, 0.5)
+    assert links.land(4, u, v, "page", rotation=0, crop=None) == (4, 0.0)

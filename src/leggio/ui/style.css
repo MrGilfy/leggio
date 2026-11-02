@@ -120,3 +120,87 @@
   opacity: 0.6;
   margin: 12px 12px 2px 12px;
 }
+
+/* ---- page overview ---- */
+
+.overview {
+  background-color: #141416;
+  color: #ffffff;
+  padding: 18px 24px 0 24px;
+}
+
+.overview-title {
+  font-size: 1.4em;
+  font-weight: bold;
+}
+
+.overview-hint {
+  color: alpha(#ffffff, 0.6);
+  font-size: 1.05em;
+  margin: 10px 0;
+}
+
+.overview-button,
+.bookmark-chip button {
+  min-height: 48px;
+  padding: 0 18px;
+  font-size: 1.1em;
+  border-radius: 14px;
+  color: #ffffff;
+  background-color: alpha(#ffffff, 0.12);
+}
+
+.overview-button:checked {
+  background-color: #3584e4;
+}
+
+.bookmark-chip .chip-go {
+  border-radius: 14px 0 0 14px;
+}
+
+.bookmark-chip .chip-edit {
+  -gtk-icon-size: 20px;
+  min-width: 48px;
+  padding: 0;
+  border-radius: 0 14px 14px 0;
+  border-left: 1px solid alpha(#ffffff, 0.15);
+}
+
+.page-card {
+  padding: 8px;
+  border-radius: 12px;
+}
+
+.page-card:focus-visible,
+.page-card:hover {
+  background-color: alpha(#ffffff, 0.08);
+}
+
+.page-card .page-thumb {
+  border-radius: 4px;
+  box-shadow: 0 1px 6px alpha(#000000, 0.6);
+}
+
+.page-card.current .page-thumb {
+  outline: 4px solid #3584e4;
+  outline-offset: 2px;
+}
+
+.page-number {
+  font-size: 1.15em;
+  font-variant-numeric: tabular-nums;
+  color: alpha(#ffffff, 0.85);
+}
+
+.page-card.current .page-number {
+  color: #ffffff;
+  font-weight: bold;
+}
+
+.bookmark-badge {
+  background-color: #3584e4;
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-weight: bold;
+}
