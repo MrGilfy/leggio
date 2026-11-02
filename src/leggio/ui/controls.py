@@ -93,6 +93,8 @@ class ControlBar(Gtk.Box):
                             "Annotate (A)", viewer.enter_annotate_mode))
         self.append(_button("leggio-crop-symbolic",
                             "Adjust margin crop (C)", viewer.enter_crop_mode))
+        self.append(_button("leggio-export-symbolic",
+                            "Export PDF with annotations (E)", viewer.export_pdf))
         self.append(_button("leggio-zoom-out-symbolic", "Zoom out", viewer.zoom_out))
         self.append(_button("leggio-zoom-reset-symbolic", "Reset zoom",
                             viewer.zoom_reset))

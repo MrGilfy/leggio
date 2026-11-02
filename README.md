@@ -59,6 +59,7 @@ sudo make install PREFIX=/usr
 | Half-page turns, night mode | Buttons in the top bar | `H` `N` |
 | Follow a jump link, then go back | Tap its marker, then Back | `J` `B` |
 | Pages and bookmarks, add a bookmark | Grid button in the top bar | `G` `K` |
+| Export a PDF with your annotations | Export button in the top bar | `E` |
 | Back to the library | Back button | `Esc` |
 
 Maintainers: see [docs/MAINTAINING.md](docs/MAINTAINING.md).

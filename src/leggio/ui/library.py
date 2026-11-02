@@ -53,6 +53,7 @@ class LibraryPage(Adw.NavigationPage):
             ("edit", self._act_edit),
             ("setlist", self._act_setlist),
             ("reveal", self._act_reveal),
+            ("export", self._act_export),
             ("forget", self._act_forget),
         ):
             action = Gio.SimpleAction.new(name, None)
@@ -64,6 +65,7 @@ class LibraryPage(Adw.NavigationPage):
         for name, handler in (
             ("open", self._act_setlist_open),
             ("rename", self._act_setlist_rename),
+            ("export", self._act_setlist_export),
             ("delete", self._act_setlist_delete),
         ):
             action = Gio.SimpleAction.new(name, None)
@@ -310,6 +312,7 @@ class LibraryPage(Adw.NavigationPage):
         menu = Gio.Menu()
         menu.append("Open", "setlists.open")
         menu.append("Rename…", "setlists.rename")
+        menu.append("Export PDF…", "setlists.export")
         section = Gio.Menu()
         section.append("Delete Setlist", "setlists.delete")
         menu.append_section(None, section)
@@ -321,6 +324,18 @@ class LibraryPage(Adw.NavigationPage):
         popover.set_pointing_to(Gdk.Rectangle(x=int(x), y=int(y), width=1, height=1))
         self._setlist_popover = popover
         popover.popup()
+
+    def _act_export(self, *_args) -> None:
+        score = self._context_score
+        if score is not None:
+            self.ctx.exporter.start(self, [score], score.title)
+
+    def _act_setlist_export(self, *_args) -> None:
+        if not self._context_setlist:
+            return
+        setlist_id, name = self._context_setlist
+        scores = self.ctx.db.setlist_scores(setlist_id)
+        self.ctx.exporter.start(self, scores, name, setlist=True)
 
     def _act_setlist_open(self, *_args) -> None:
         if self._context_setlist:
@@ -450,6 +465,7 @@ class LibraryPage(Adw.NavigationPage):
         section = Gio.Menu()
         section.append("Add to Setlist…", "score.setlist")
         section.append("Show in Files", "score.reveal")
+        section.append("Export PDF…", "score.export")
         menu.append_section(None, section)
 
         if obj.score.missing:

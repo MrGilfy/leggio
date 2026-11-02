@@ -65,6 +65,7 @@ class SetlistPage(Adw.NavigationPage):
 
         menu = Gio.Menu()
         menu.append("Rename…", "setlist.rename")
+        menu.append("Export PDF…", "setlist.export")
         menu.append("Delete Setlist", "setlist.delete")
         menu_button = Gtk.MenuButton()
         menu_button.set_icon_name("view-more-symbolic")
@@ -74,6 +75,7 @@ class SetlistPage(Adw.NavigationPage):
         group = Gio.SimpleActionGroup()
         for name, handler in (
             ("rename", self._on_rename),
+            ("export", self._on_export),
             ("delete", self._on_delete),
         ):
             action = Gio.SimpleAction.new(name, None)
@@ -174,6 +176,10 @@ class SetlistPage(Adw.NavigationPage):
             self.ctx.toast("Nothing to open — every file is missing")
             return
         self.ctx.open_setlist(self.setlist_id, playable)
+
+    def _on_export(self, *_args) -> None:
+        self.ctx.exporter.start(self, list(self._scores), self.get_title(),
+                                setlist=True)
 
     def _on_rename(self, *_args) -> None:
         setlist = self._setlist()

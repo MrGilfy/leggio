@@ -221,6 +221,12 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
     def close_viewer(self) -> None:
         self.ctx.navigation.pop()
 
+    def export_pdf(self) -> None:
+        """Export this score, or the whole setlist, as an annotated PDF."""
+        setlist = len(self.scores) > 1
+        title = self.get_title() if setlist else self.score.title
+        self.ctx.exporter.start(self, list(self.scores), title, setlist=setlist)
+
     # ----------------------------------------------------------- score state
 
     @property
@@ -803,6 +809,9 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
             return True
         if keyval in (Gdk.KEY_g, Gdk.KEY_G):
             self.open_overview()
+            return True
+        if keyval in (Gdk.KEY_e, Gdk.KEY_E):
+            self.export_pdf()
             return True
         if keyval in (Gdk.KEY_k, Gdk.KEY_K):
             self.add_bookmark_here()
