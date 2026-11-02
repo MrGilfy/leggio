@@ -2,22 +2,35 @@
   <img src="data/icons/hicolor/scalable/apps/io.github.mrgilfy.leggio.svg" alt="" width="112">
   <h1>Leggio</h1>
   <p>Read sheet music PDFs from a screen on your music stand.</p>
+  <p>
+    <a href="https://github.com/MrGilfy/leggio/releases/latest"><img src="https://img.shields.io/github/v/release/MrGilfy/leggio" alt="Latest release"></a>
+    <a href="https://github.com/MrGilfy/leggio/actions/workflows/ci.yml"><img src="https://github.com/MrGilfy/leggio/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/github/license/MrGilfy/leggio" alt="License: GPL-3.0-or-later"></a>
+  </p>
 </div>
 
-![The Leggio library](data/screenshots/library.png)
+![Turning pages in a Beethoven sonata](data/screenshots/page-turns.gif)
 
 Leggio keeps a library of your sheet music PDFs, with search, tags and
 setlists. Scores open fullscreen with the white margins cut off, and pages
 turn instantly by tap, swipe, keyboard or Bluetooth pedal. You can draw on
-a score, use half-page turns and night mode, and your PDF files are never
-changed.
+a score, jump to a D.S. or coda with one tap, bookmark long scores and
+export them as PDFs, and your PDF files are never changed.
+
+<p align="center">
+  <img src="data/screenshots/library.png" alt="The score library" width="49%">
+  <img src="data/screenshots/viewer-night.png" alt="A score in night mode" width="49%">
+</p>
+<p align="center">
+  <img src="data/screenshots/overview.png" alt="The page overview with bookmarks" width="98.5%">
+</p>
 
 ## Install
 
 **Arch Linux.** From the AUR, or `leggio-git` for the newest code:
 
 ```sh
-paru -S leggio
+yay -S leggio
 ```
 
 **Flatpak.** Download `leggio-<version>.flatpak` from the
