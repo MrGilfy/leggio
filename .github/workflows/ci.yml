@@ -64,14 +64,14 @@ jobs:
             desktop-file-utils appstream
 
       - name: Validate desktop entry
-        run: desktop-file-validate data/io.github.MrGilfy.Leggio.desktop
+        run: desktop-file-validate data/io.github.mrgilfy.leggio.desktop
 
       # --no-net: the screenshot lives in this repository, and on a pull
       # request from a fork it is not yet reachable at the raw.github URL.
       - name: Validate AppStream metainfo
         run: |
           appstreamcli validate --no-net \
-            data/io.github.MrGilfy.Leggio.metainfo.xml
+            data/io.github.mrgilfy.leggio.metainfo.xml
 
   smoke:
     name: Headless start-up
@@ -115,11 +115,11 @@ jobs:
             usr/lib/leggio/leggio/app.py \
             usr/lib/leggio/leggio/ui/icons/hicolor/scalable/actions/leggio-back-symbolic.svg \
             usr/lib/leggio/leggio/ui/icons/hicolor/24x24/actions/leggio-back-symbolic.symbolic.png \
-            usr/share/applications/io.github.MrGilfy.Leggio.desktop \
-            usr/share/metainfo/io.github.MrGilfy.Leggio.metainfo.xml \
-            usr/share/icons/hicolor/scalable/apps/io.github.MrGilfy.Leggio.svg \
-            usr/share/icons/hicolor/128x128/apps/io.github.MrGilfy.Leggio.png \
-            usr/share/icons/hicolor/256x256/apps/io.github.MrGilfy.Leggio.png \
+            usr/share/applications/io.github.mrgilfy.leggio.desktop \
+            usr/share/metainfo/io.github.mrgilfy.leggio.metainfo.xml \
+            usr/share/icons/hicolor/scalable/apps/io.github.mrgilfy.leggio.svg \
+            usr/share/icons/hicolor/128x128/apps/io.github.mrgilfy.leggio.png \
+            usr/share/icons/hicolor/256x256/apps/io.github.mrgilfy.leggio.png \
             usr/share/licenses/leggio/LICENSE
           do
             test -e "stage/$f" || { echo "missing: $f"; exit 1; }
@@ -137,6 +137,6 @@ jobs:
 
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          manifest-path: packaging/flatpak/io.github.MrGilfy.Leggio.yml
+          manifest-path: packaging/flatpak/io.github.mrgilfy.leggio.yml
           bundle: leggio.flatpak
           artifact-name: leggio-flatpak

@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright 2026 MrGilfy -->
 <component type="desktop-application">
-  <id>io.github.MrGilfy.Leggio</id>
+  <id>io.github.mrgilfy.leggio</id>
+  <!-- Renamed in 0.4.0: Flathub needs the domain part in lowercase,
+       and AppStream asks for an all-lowercase ID. -->
+  <replaces>
+    <id>io.github.MrGilfy.Leggio</id>
+  </replaces>
 
   <name>Leggio</name>
   <summary>Read sheet music PDFs from a screen on your music stand</summary>
@@ -41,7 +46,7 @@
     </p>
   </description>
 
-  <launchable type="desktop-id">io.github.MrGilfy.Leggio.desktop</launchable>
+  <launchable type="desktop-id">io.github.mrgilfy.leggio.desktop</launchable>
 
   <screenshots>
     <screenshot type="default">

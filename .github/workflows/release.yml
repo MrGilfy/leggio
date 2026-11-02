@@ -47,16 +47,16 @@ jobs:
           set -eu
           version="${GITHUB_REF_NAME#v}"
           if ! grep -q "<release version=\"$version\"" \
-              data/io.github.MrGilfy.Leggio.metainfo.xml; then
+              data/io.github.mrgilfy.leggio.metainfo.xml; then
             echo "::error::no <release version=\"$version\"> in the metainfo"
             exit 1
           fi
 
       - name: Validate metadata
         run: |
-          desktop-file-validate data/io.github.MrGilfy.Leggio.desktop
+          desktop-file-validate data/io.github.mrgilfy.leggio.desktop
           appstreamcli validate --no-net \
-            data/io.github.MrGilfy.Leggio.metainfo.xml
+            data/io.github.mrgilfy.leggio.metainfo.xml
 
       # Reproducible: gzip -n omits the timestamp and filename that
       # `git archive --format=tar.gz` would otherwise embed. Without it two
@@ -109,7 +109,7 @@ jobs:
 
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          manifest-path: packaging/flatpak/io.github.MrGilfy.Leggio.yml
+          manifest-path: packaging/flatpak/io.github.mrgilfy.leggio.yml
           bundle: leggio-${{ needs.source.outputs.version }}.flatpak
           artifact-name: flatpak
           # A release is built from scratch, never from a cached module.

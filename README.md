@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="data/icons/hicolor/scalable/apps/io.github.MrGilfy.Leggio.svg" alt="" width="112">
+  <img src="data/icons/hicolor/scalable/apps/io.github.mrgilfy.leggio.svg" alt="" width="112">
   <h1>Leggio</h1>
   <p>Read sheet music PDFs from a screen on your music stand.</p>
 </div>
@@ -27,12 +27,12 @@ paru -S leggio
 flatpak install --user leggio-*.flatpak
 ```
 
-Leggio's settings and library live in `~/.var/app/io.github.MrGilfy.Leggio/`.
+Leggio's settings and library live in `~/.var/app/io.github.mrgilfy.leggio/`.
 It can read your home folder but not write to it. To add a folder outside
 home, run:
 
 ```sh
-flatpak override --user --filesystem=/path:ro io.github.MrGilfy.Leggio
+flatpak override --user --filesystem=/path:ro io.github.mrgilfy.leggio
 ```
 
 **From source.** Install Python 3.11+, PyGObject, pycairo, GTK 4,
