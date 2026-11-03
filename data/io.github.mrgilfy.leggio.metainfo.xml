@@ -97,6 +97,16 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.4.1" date="2026-11-03">
+      <description>
+        <p>The Flatpak only sees the folders you give it.</p>
+        <ul>
+          <li>The Flatpak no longer needs access to your whole home folder. It only sees the folders you pick. After updating, Flatpak users choose their score folders once more: a banner in the library offers this, and annotations and bookmarks are kept</li>
+          <li>Scores on a folder or drive that is temporarily unavailable are kept instead of being marked missing</li>
+          <li>Opening a PDF from the file manager that is already in the library opens that entry instead of adding it twice</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-11-02">
       <description>
         <p>A new app ID, ready for Flathub.</p>
