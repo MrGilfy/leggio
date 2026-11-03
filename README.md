@@ -41,12 +41,18 @@ flatpak install --user leggio-*.flatpak
 ```
 
 Leggio's settings and library live in `~/.var/app/io.github.mrgilfy.leggio/`.
-It can read your home folder but not write to it. To add a folder outside
-home, run:
+The Flatpak can only see the files you give it: add your score folders in
+Preferences, and open single PDFs from your file manager. From a terminal,
+let Flatpak pass the file in:
 
 ```sh
-flatpak override --user --filesystem=/path:ro io.github.mrgilfy.leggio
+flatpak run --file-forwarding io.github.mrgilfy.leggio @@ score.pdf @@
 ```
+
+Flatpaks up to 0.4.0 could read your whole home folder. After upgrading,
+Leggio shows a banner for each library folder it can no longer open.
+Choose the folder again and its scores come back with their annotations,
+bookmarks and reading positions.
 
 Upgrading the Flatpak from 0.3.0 or older: the app ID changed from
 `io.github.MrGilfy.Leggio` to `io.github.mrgilfy.leggio`, and Flatpak does

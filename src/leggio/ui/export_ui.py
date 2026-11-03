@@ -5,7 +5,7 @@ and the toasts that report on it.
 One ExportController per window, shared by the viewer, the library and the
 setlist page, so only one export runs at a time. The save dialog is a
 Gtk.FileDialog, which goes through the save portal inside Flatpak: that is
-the only way to write outside the sandbox, since home is read-only there.
+the only way to write outside the sandbox, which can't see the user's files.
 """
 
 from __future__ import annotations
@@ -33,6 +33,7 @@ from ..export import (
     suggested_name,
 )
 from ..models import Score
+from ..sandbox import host_path
 
 log = logging.getLogger(__name__)
 
@@ -106,7 +107,10 @@ class ExportController:
                                                 setlist=setlist))
         folder = Path(scores[0].path).parent
         if folder.is_dir():
-            chooser.set_initial_folder(Gio.File.new_for_path(str(folder)))
+            # The save dialog runs outside the sandbox, where a document
+            # portal path means nothing; give it the real folder.
+            initial = host_path(folder) or str(folder)
+            chooser.set_initial_folder(Gio.File.new_for_path(initial))
         pdfs = Gtk.FileFilter()
         pdfs.set_name("PDF documents")
         pdfs.add_mime_type("application/pdf")
