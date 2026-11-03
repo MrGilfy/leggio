@@ -21,11 +21,12 @@ finish-args:
   - --socket=wayland
   - --socket=fallback-x11
   - --device=dri
-  # Scores are read where they already are; Leggio never writes to them.
-  # Its own config, library and cache live in ~/.var/app/<id>/.
-  - --filesystem=home:ro
-  # Fallback idle inhibitor for sessions without the inhibit portal.
-  - --talk-name=org.freedesktop.ScreenSaver
+  # No file system access. Library folders are picked through the file
+  # chooser portal, PDFs opened from the file manager come through the
+  # document portal, and exports are written through the save portal.
+  # Leggio's own config, library and cache live in ~/.var/app/<id>/.
+  # Keeping the screen awake uses the Wayland idle-inhibit protocol or the
+  # inhibit portal, so no D-Bus names are needed either.
 
 cleanup:
   - /include
