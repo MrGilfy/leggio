@@ -7,7 +7,7 @@ import logging
 
 import pytest
 
-from leggio.inhibit import IdleInhibitor, PortalInhibit, Session
+from leggio.inhibit import IdleInhibitor, PortalInhibit, ScreenSaverInhibit, Session
 
 
 class FakeMethod:
@@ -229,3 +229,39 @@ def test_portal_without_inhibit_interface(results):
     portal = PortalInhibit("test", bus_getter=lambda: bus)
     portal.start(lambda ok, reason="": results.append((ok, reason)))
     assert results == [(False, "not available")]
+
+
+# ------------------------------------------------------------ screensaver
+
+class NoScreenSaverBus:
+    """What the Flatpak's D-Bus proxy shows: the name has no owner."""
+
+    def call_sync(self, _name, _path, _iface, method, *_rest):
+        from gi.repository import GLib
+
+        assert method == "NameHasOwner"
+        return GLib.Variant("(b)", (False,))
+
+
+@pytest.mark.parametrize("sandboxed, reason", [
+    (False, "not running"),
+    (True, "not available to the Flatpak"),
+])
+def test_screensaver_hidden_by_the_sandbox(results, sandboxed, reason):
+    method = ScreenSaverInhibit("test", bus_getter=NoScreenSaverBus,
+                                sandboxed=lambda: sandboxed)
+    method.start(lambda ok, why="": results.append((ok, why)))
+    assert results == [(False, reason)]
+
+
+def test_without_screensaver_the_portal_is_used():
+    """The order the Flatpak sees on X11: no Wayland protocol, no
+    ScreenSaver, so the portal is what keeps the screen awake."""
+    wayland = FakeMethod("wayland", ok=False, reason="not a Wayland session")
+    screensaver = FakeMethod("screensaver", ok=False,
+                             reason="not available to the Flatpak")
+    portal = FakeMethod("portal")
+    x11 = FakeMethod("x11", stackable=True)
+    inhibitor = make([wayland, screensaver, portal, x11])
+    inhibitor.inhibit(None)
+    assert inhibitor.active_labels == ["portal", "x11"]

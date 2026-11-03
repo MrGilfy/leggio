@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Optional
 
 import gi
@@ -13,7 +14,8 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, Gio, GObject, Gtk  # noqa: E402
 
 from ..models import CropRect, Score
-from .dialogs import MetadataDialog, SetlistDialog
+from ..sandbox import display_path
+from .dialogs import MetadataDialog, SetlistDialog, choose_folder
 from .score_card import ScoreCard
 from .setlist_page import SetlistPage
 from .store import SORT_KEYS, SORT_LABELS, LibraryStore, ScoreObject
@@ -33,6 +35,8 @@ class LibraryPage(Adw.NavigationPage):
         self._context_score: Optional[Score] = None
         self._setlist_popover: Optional[Gtk.PopoverMenu] = None
         self._context_setlist: Optional[tuple[int, str]] = None
+        # Library folders that could not be opened and still hold scores.
+        self._unreachable: dict[Path, int] = {}
 
         self._build_actions()
 
@@ -182,6 +186,11 @@ class LibraryPage(Adw.NavigationPage):
         header.pack_end(self.sort_reverse)
         header.pack_end(self.sort_dropdown)
 
+        # Says so when a library folder can't be opened, rather than letting
+        # its scores quietly turn into "missing" ones.
+        self.folder_banner = Adw.Banner()
+        self.folder_banner.connect("button-clicked", self._on_banner_clicked)
+
         self.progress = Gtk.ProgressBar()
         self.progress.add_css_class("osd")
         self.progress_revealer = Gtk.Revealer()
@@ -236,6 +245,7 @@ class LibraryPage(Adw.NavigationPage):
 
         view = Adw.ToolbarView()
         view.add_top_bar(header)
+        view.add_top_bar(self.folder_banner)
         view.add_top_bar(self.progress_revealer)
         view.set_content(self.stack)
         return view
@@ -549,6 +559,7 @@ class LibraryPage(Adw.NavigationPage):
     def start_scan(self) -> None:
         directories = self.ctx.config.directories
         if not directories:
+            self._show_unreachable({})
             self._scan_toast("No library folders configured")
             return
         started = self.ctx.scanner.start(
@@ -571,6 +582,9 @@ class LibraryPage(Adw.NavigationPage):
     def _on_scan_finished(self, result) -> None:
         self.progress_revealer.set_reveal_child(False)
         self.reload()
+        self._show_unreachable(
+            {root: n for root, n in result.unreachable.items() if n}
+        )
 
         if result.cancelled:
             self._scan_toast("Scan cancelled")
@@ -585,6 +599,8 @@ class LibraryPage(Adw.NavigationPage):
             parts.append(f"{result.missing} now missing")
         if result.unreadable:
             parts.append(f"{len(result.unreadable)} unreadable")
+        if not parts and self._unreachable:
+            return      # the banner already says why nothing was found
         if not parts:
             parts.append(f"{result.found} scores, nothing changed")
         self._scan_toast("Scan complete — " + ", ".join(parts))
@@ -595,6 +611,43 @@ class LibraryPage(Adw.NavigationPage):
             return
         self.dismiss_scan_toast()
         self._last_scan_toast = self.ctx.toast(message)
+
+    # ------------------------------------------------- unreachable folders
+
+    def _show_unreachable(self, folders: dict[Path, int]) -> None:
+        self._unreachable = folders
+        if not folders:
+            self.folder_banner.set_revealed(False)
+            return
+        if len(folders) == 1:
+            [(root, count)] = folders.items()
+            scores = "1 score" if count == 1 else f"{count} scores"
+            self.folder_banner.set_title(
+                f"Can't open the folder “{root.name or display_path(root)}”. "
+                f"Choose it again to get its {scores} back."
+            )
+            self.folder_banner.set_button_label("Choose Folder…")
+        else:
+            self.folder_banner.set_title(
+                f"Can't open {len(folders)} library folders. "
+                "Choose them again in Preferences."
+            )
+            self.folder_banner.set_button_label("Preferences")
+        self.folder_banner.set_revealed(True)
+
+    def _on_banner_clicked(self, _banner) -> None:
+        if len(self._unreachable) != 1:
+            self.activate_action("app.preferences", None)
+            return
+        [old] = self._unreachable
+
+        def chosen(new: Path) -> None:
+            self.ctx.config.replace_directory(old, new)
+            self.ctx.config.save()
+            self.start_scan()
+
+        choose_folder(self.ctx.window, chosen, title="Choose Library Folder",
+                      initial=old)
 
     def dismiss_scan_toast(self) -> None:
         if self._last_scan_toast is not None:

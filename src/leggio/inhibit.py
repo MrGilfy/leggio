@@ -10,7 +10,8 @@ are tried in order and the first one that is confirmed to work is kept:
    back to the portal without saying whether that worked.
 2. org.freedesktop.ScreenSaver over D-Bus. GNOME, KDE, XFCE, MATE,
    Cinnamon and LXQt all provide it, and a call to it either succeeds or
-   fails straight away.
+   fails straight away. The Flatpak is not allowed to talk to it, so there
+   the portal below takes its place.
 3. xdg-desktop-portal Inhibit. The portal answers each request, so a
    backend that refuses is detected. It comes after ScreenSaver because
    xdg-desktop-portal-gtk, the usual backend outside GNOME and KDE,
@@ -35,6 +36,7 @@ from typing import Callable, Optional, Protocol
 from gi.repository import Gio, GLib
 
 from . import native
+from .sandbox import in_flatpak
 
 log = logging.getLogger(__name__)
 
@@ -257,9 +259,11 @@ class ScreenSaverInhibit:
     label = "org.freedesktop.ScreenSaver"
     stackable = False
 
-    def __init__(self, reason: str, bus_getter=_session_bus):
+    def __init__(self, reason: str, bus_getter=_session_bus,
+                 sandboxed=in_flatpak):
         self._reason = reason
         self._bus_getter = bus_getter
+        self._sandboxed = sandboxed
         self._bus: Optional[Gio.DBusConnection] = None
         self._cookie: Optional[int] = None
 
@@ -268,6 +272,10 @@ class ScreenSaverInhibit:
         if self._bus is None:
             return done(False, "no session bus")
         if not _name_has_owner(self._bus, SCREENSAVER_NAME):
+            # The Flatpak's D-Bus proxy hides names the app may not talk to,
+            # so from inside, "not allowed" looks the same as "not running".
+            if self._sandboxed():
+                return done(False, "not available to the Flatpak")
             return done(False, "not running")
         try:
             result = self._bus.call_sync(

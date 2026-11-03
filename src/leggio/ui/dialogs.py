@@ -5,21 +5,55 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Optional
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gtk  # noqa: E402
+from gi.repository import Adw, Gio, Gtk  # noqa: E402
 
 from .. import APP_ID, __version__
 from ..config import Config
 from ..db import Database
 from ..models import Score
 from ..pdf import clean_title
+from ..sandbox import display_path
+from ..scanner import is_reachable
 
 log = logging.getLogger(__name__)
+
+
+def choose_folder(
+    parent: Optional[Gtk.Window],
+    on_chosen: Callable[[Path], None],
+    *,
+    title: str = "Add Library Folder",
+    initial: Optional[Path] = None,
+) -> None:
+    """Ask for a folder. Inside a Flatpak this is the file chooser portal,
+    and picking a folder is what gives Leggio access to it."""
+    dialog = Gtk.FileDialog()
+    dialog.set_title(title)
+    if initial is not None:
+        # Outside the sandbox's view, but the portal opens the chooser there.
+        dialog.set_initial_folder(Gio.File.new_for_path(str(initial)))
+
+    def finished(dialog, result) -> None:
+        try:
+            folder = dialog.select_folder_finish(result)
+        except Exception:
+            return  # cancelled
+        if folder is None:
+            return
+        local = folder.get_path()
+        if local is None:
+            # A network location with no local mount (no gvfs-fuse).
+            log.warning("cannot add %s: it has no local path", folder.get_uri())
+            return
+        on_chosen(Path(local))
+
+    dialog.select_folder(parent, None, finished)
 
 
 class MetadataDialog(Adw.Dialog):
@@ -76,7 +110,7 @@ class MetadataDialog(Adw.Dialog):
         group.add(self.tags_row)
 
         info = Adw.ActionRow(title="File")
-        info.set_subtitle(score.path)
+        info.set_subtitle(display_path(score.path))
         info.set_subtitle_selectable(True)
         info.add_css_class("property")
         group.add(info)
@@ -248,11 +282,18 @@ class PreferencesDialog(Adw.PreferencesDialog):
             return
 
         for directory in directories:
-            row = Adw.ActionRow(title=directory.name or str(directory))
-            row.set_subtitle(str(directory))
-            if not directory.is_dir():
-                row.set_subtitle(f"{directory}  —  not found")
+            shown = display_path(directory)
+            row = Adw.ActionRow(title=directory.name or shown)
+            row.set_subtitle(shown)
+            if not is_reachable(directory):
+                row.set_subtitle(f"{shown}  —  can't be opened")
                 row.add_css_class("error")
+                again = Gtk.Button.new_from_icon_name("document-open-symbolic")
+                again.set_valign(Gtk.Align.CENTER)
+                again.add_css_class("flat")
+                again.set_tooltip_text("Choose this folder again")
+                again.connect("clicked", self._on_choose_again, directory)
+                row.add_suffix(again)
             remove = Gtk.Button.new_from_icon_name("user-trash-symbolic")
             remove.set_valign(Gtk.Align.CENTER)
             remove.add_css_class("flat")
@@ -263,23 +304,9 @@ class PreferencesDialog(Adw.PreferencesDialog):
             self._rows.append(row)
 
     def _on_add(self, _button) -> None:
-        dialog = Gtk.FileDialog()
-        dialog.set_title("Add Library Folder")
-        dialog.select_folder(self.get_root(), None, self._on_folder_chosen)
+        choose_folder(self.get_root(), self._on_folder_chosen)
 
-    def _on_folder_chosen(self, dialog, result) -> None:
-        try:
-            folder = dialog.select_folder_finish(result)
-        except Exception:
-            return  # user cancelled
-        if folder is None:
-            return
-        local = folder.get_path()
-        if local is None:
-            # A network location with no local mount (no gvfs-fuse).
-            log.warning("cannot add %s: it has no local path", folder.get_uri())
-            return
-        path = Path(local)
+    def _on_folder_chosen(self, path: Path) -> None:
         directories = self.config.directories
         if path not in directories:
             directories.append(path)
@@ -287,6 +314,16 @@ class PreferencesDialog(Adw.PreferencesDialog):
             self.config.save()
             self._populate()
             self.on_changed()
+
+    def _on_choose_again(self, _button, directory: Path) -> None:
+        def chosen(path: Path) -> None:
+            self.config.replace_directory(directory, path)
+            self.config.save()
+            self._populate()
+            self.on_changed()
+
+        choose_folder(self.get_root(), chosen, title="Choose Library Folder",
+                      initial=directory)
 
     def _on_remove(self, _button, directory: Path) -> None:
         directories = [d for d in self.config.directories if d != directory]

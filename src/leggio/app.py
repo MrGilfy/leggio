@@ -19,7 +19,8 @@ from .db import Database
 from .inhibit import IdleInhibitor
 from .models import Score
 from .render import RenderService
-from .scanner import Scanner, index_file
+from .sandbox import in_flatpak
+from .scanner import Scanner, find_same_file, index_file
 from .thumbs import ThumbnailWorker
 from .ui.dialogs import PreferencesDialog, show_about
 from .ui.export_ui import ExportController
@@ -159,12 +160,24 @@ class LeggioWindow(Adw.ApplicationWindow):
         except OSError:
             pass
         if not path.is_file():
-            self.toast(f"File not found: {path}")
+            if in_flatpak():
+                # The sandbox sees only files shared through a portal. A path
+                # typed after `flatpak run` is not, unless --file-forwarding
+                # is used, as the desktop entry does.
+                log.info(
+                    "%s is not visible inside the Flatpak; open it with "
+                    "flatpak run --file-forwarding %s @@ FILE @@",
+                    path, APP_ID,
+                )
+                self.toast(f"Can't open {path.name}: Leggio has no access to it")
+            else:
+                self.toast(f"File not found: {path}")
             return
 
-        score = next(
-            (s for s in self.db.all_scores() if s.path == str(path)), None
-        )
+        scores = self.db.all_scores()
+        score = next((s for s in scores if s.path == str(path)), None)
+        if score is None:
+            score = find_same_file(path, scores)
         if score is None:
             # Not in a scanned folder: index it anyway so it behaves like
             # any other score, reading position included.

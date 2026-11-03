@@ -14,6 +14,8 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+from .sandbox import in_flatpak
+
 log = logging.getLogger(__name__)
 
 APP_NAME = "leggio"
@@ -37,7 +39,9 @@ THUMB_DIR = CACHE_DIR / "thumbs"
 
 DEFAULTS: dict[str, dict[str, Any]] = {
     "library": {
-        "directories": ["~/Music"],
+        # A Flatpak can only open folders picked in the file chooser, so it
+        # starts with none and the library asks for one.
+        "directories": [] if in_flatpak() else ["~/Music"],
         "follow_symlinks": False,
     },
     "viewer": {
@@ -143,6 +147,17 @@ class Config:
                 text = "~" + text[len(home):]
             stored.append(text)
         self.set("library", "directories", stored)
+
+    def replace_directory(self, old: Path, new: Path) -> None:
+        """Put `new` where `old` was in the list, keeping the order."""
+        directories = self.directories
+        if new in directories:
+            directories = [d for d in directories if d != old]
+        elif old in directories:
+            directories[directories.index(old)] = new
+        else:
+            directories.append(new)
+        self.directories = directories
 
 
 def ensure_dirs() -> None:
