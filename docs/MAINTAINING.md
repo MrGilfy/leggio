@@ -52,9 +52,9 @@ git push origin :refs/tags/vX.Y.Z
 
 ## Flatpak
 
-The manifest is `packaging/flatpak/io.github.mrgilfy.leggio.yml`. It is a
-self-hosted bundle attached to each release, not a Flathub app. To build,
-install and bundle it locally:
+The manifest here is `packaging/flatpak/io.github.mrgilfy.leggio.yml`. It
+builds the self-hosted bundle attached to each release. To build, install
+and bundle it locally:
 
 ```sh
 sudo dnf install flatpak-builder          # or your distribution's package
@@ -68,6 +68,17 @@ poppler-data from pinned tarballs. To update one, change its `url` and set
 `sha256` to the output of `sha256sum` on the new tarball. When moving to a
 new GNOME runtime, also change the `gnome-NN` container image in
 `.github/workflows/ci.yml` and `release.yml`.
+
+## Flathub
+
+Leggio is on Flathub as
+[io.github.mrgilfy.leggio](https://flathub.org/apps/io.github.mrgilfy.leggio).
+Its manifest lives in
+[flathub/io.github.mrgilfy.leggio](https://github.com/flathub/io.github.mrgilfy.leggio),
+not here, and MrGilfy maintains it by hand: Flathub does not accept
+AI-written manifest changes. To ship a release, open a pull request there
+that updates the source to the new tag. Flathub builds it on the PR, and
+the update is published after the PR is merged.
 
 ## Updating the AUR packages
 

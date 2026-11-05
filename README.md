@@ -7,6 +7,9 @@
     <a href="https://github.com/MrGilfy/leggio/actions/workflows/ci.yml"><img src="https://github.com/MrGilfy/leggio/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <a href="LICENSE"><img src="https://img.shields.io/github/license/MrGilfy/leggio" alt="License: GPL-3.0-or-later"></a>
   </p>
+  <p>
+    <a href="https://flathub.org/apps/io.github.mrgilfy.leggio"><img width="200" src="https://flathub.org/api/badge?locale=en" alt="Get it on Flathub"></a>
+  </p>
 </div>
 
 ![Turning pages in a Beethoven sonata](data/screenshots/page-turns.gif)
@@ -27,46 +30,41 @@ export them as PDFs, and your PDF files are never changed.
 
 ## Install
 
+**Flathub.** For most Linux distributions:
+
+```sh
+flatpak install flathub io.github.mrgilfy.leggio
+```
+
+The Flatpak can only see the files you give it: add your score folders in
+Preferences, and open single PDFs from your file manager. Its settings and
+library live in `~/.var/app/io.github.mrgilfy.leggio/`.
+
 **Arch Linux.** From the AUR, or `leggio-git` for the newest code:
 
 ```sh
 yay -S leggio
 ```
 
-**Flatpak.** Download `leggio-<version>.flatpak` from the
-[latest release](https://github.com/MrGilfy/leggio/releases/latest), then:
+**Flatpak bundle.** If you can't use Flathub, each
+[release](https://github.com/MrGilfy/leggio/releases/latest) has a
+`leggio-<version>.flatpak` to install with `flatpak install --user`.
+
+Already using the bundle? Flathub has the same app ID, so you can switch
+without losing your library. Remove the bundle, keeping its data, then
+install from Flathub:
 
 ```sh
-flatpak install --user leggio-*.flatpak
+flatpak uninstall --user io.github.mrgilfy.leggio
+flatpak install flathub io.github.mrgilfy.leggio
 ```
 
-Leggio's settings and library live in `~/.var/app/io.github.mrgilfy.leggio/`.
-The Flatpak can only see the files you give it: add your score folders in
-Preferences, and open single PDFs from your file manager. From a terminal,
-let Flatpak pass the file in:
-
-```sh
-flatpak run --file-forwarding io.github.mrgilfy.leggio @@ score.pdf @@
-```
-
-Flatpaks up to 0.4.0 could read your whole home folder. After upgrading,
-Leggio shows a banner for each library folder it can no longer open.
-Choose the folder again and its scores come back with their annotations,
-bookmarks and reading positions.
-
-Upgrading the Flatpak from 0.3.0 or older: the app ID changed from
-`io.github.MrGilfy.Leggio` to `io.github.mrgilfy.leggio`, and Flatpak does
-not carry your library over. Move it once, before you first start the new
-version:
-
-```sh
-mv ~/.var/app/io.github.MrGilfy.Leggio ~/.var/app/io.github.mrgilfy.leggio
-flatpak uninstall io.github.MrGilfy.Leggio
-```
-
-If the new version has already run, it made an empty library: delete
-`~/.var/app/io.github.mrgilfy.leggio` first, unless you have added scores
-to it since.
+If you come from 0.4.0 or older, Leggio shows a banner for each library
+folder it can no longer open; choose the folder again and its scores come
+back with their annotations. From 0.3.0 or older, the app ID was
+`io.github.MrGilfy.Leggio`, so first move your library across with
+`mv ~/.var/app/io.github.MrGilfy.Leggio ~/.var/app/io.github.mrgilfy.leggio`
+and uninstall the old ID.
 
 **From source.** Install Python 3.11+, PyGObject, pycairo, GTK 4,
 libadwaita and poppler-glib, then:
