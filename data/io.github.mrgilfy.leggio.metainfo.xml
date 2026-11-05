@@ -9,7 +9,7 @@
   </replaces>
 
   <name>Leggio</name>
-  <summary>Read sheet music PDFs from a screen on your music stand</summary>
+  <summary>Read sheet music from a screen</summary>
 
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
@@ -67,6 +67,12 @@
   <url type="bugtracker">https://github.com/MrGilfy/leggio/issues</url>
   <url type="vcs-browser">https://github.com/MrGilfy/leggio</url>
 
+  <!-- Contrast with the icon's #1c71d8 (WCAG): 4.2:1 light, 3.1:1 dark -->
+  <branding>
+    <color type="primary" scheme_preference="light">#f6efdc</color>
+    <color type="primary" scheme_preference="dark">#2b2724</color>
+  </branding>
+
   <categories>
     <category>AudioVideo</category>
     <category>Audio</category>
@@ -97,6 +103,14 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.4.2" date="2026-11-05" type="development">
+      <description>
+        <p>An updated store listing.</p>
+        <ul>
+          <li>A shorter summary and new brand colours for the Flathub page</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.1" date="2026-11-03">
       <description>
         <p>The Flatpak only sees the folders you give it.</p>
