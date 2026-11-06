@@ -34,7 +34,10 @@
       <li>Half-page turns, so you can see what is coming next</li>
       <li>Turn pages by tap, swipe, keyboard or Bluetooth page-turner pedal</li>
       <li>Two pages side by side on a wide screen, one page on a tall one</li>
+      <li>Add jump links to a D.S., D.C. or To Coda, then follow them with one tap</li>
+      <li>Bookmarks and a page overview, for finding your way in long scores</li>
       <li>Draw on a score with a pen, highlighter, eraser and musical symbols</li>
+      <li>Export a score or a setlist as a PDF with your annotations drawn in</li>
       <li>Night mode turns pages white-on-black for dark stages</li>
       <li>A setlist reads as one long document, several scores in a row</li>
       <li>Remembers where you stopped in each score</li>
@@ -42,7 +45,7 @@
     </ul>
     <p>
       Your PDF files are never changed. Everything Leggio saves is kept in
-      its own library.
+      its own library. The Flatpak only sees the folders you choose.
     </p>
   </description>
 
@@ -75,15 +78,23 @@
 
   <categories>
     <category>AudioVideo</category>
-    <category>Audio</category>
+    <category>Music</category>
   </categories>
 
   <keywords>
+    <keyword>music</keyword>
     <keyword>sheet music</keyword>
     <keyword>score</keyword>
-    <keyword>notation</keyword>
-    <keyword>PDF</keyword>
+    <keyword>musician</keyword>
     <keyword>music stand</keyword>
+    <keyword>page turner</keyword>
+    <keyword>setlist</keyword>
+    <keyword>pdf</keyword>
+    <keyword xml:lang="de">Noten</keyword>
+    <keyword xml:lang="de">Notenblatt</keyword>
+    <keyword xml:lang="de">Notenständer</keyword>
+    <keyword xml:lang="de">Partitur</keyword>
+    <keyword xml:lang="de">Umblättern</keyword>
   </keywords>
 
   <provides>
@@ -103,6 +114,15 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.4.3" date="2026-11-06">
+      <description>
+        <p>An updated store listing.</p>
+        <ul>
+          <li>The description now covers jump links, bookmarks, PDF export and the Flatpak's folder access</li>
+          <li>Leggio is now listed under Music, with new search keywords, also in German</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.2" date="2026-11-05">
       <description>
         <p>An updated store listing.</p>
