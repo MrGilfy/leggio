@@ -4,7 +4,8 @@
 One connection shared across threads behind a lock, in WAL mode.
 
 The scanner never deletes rows or overwrites user metadata: a file that
-disappears is only flagged `missing`.
+disappears is only flagged `missing`. The one exception is a missing score
+that duplicates a live one, which is merged into it.
 """
 
 from __future__ import annotations
@@ -333,14 +334,124 @@ class Database:
             self._conn.execute("DELETE FROM scores WHERE id = ?", (score_id,))
             self._conn.commit()
 
-    def forget_missing(self) -> int:
-        """Explicit user action only - removes every score flagged missing,
-        with its annotations, bookmarks and setlist entries. Returns how
-        many were removed."""
+    def gone_scores(self) -> list[int]:
+        """Ids of the missing scores whose file is really gone.
+
+        A score can be flagged missing while its file still opens: a PDF
+        opened from outside the library folders, or one in a folder that
+        was taken out of the library. Those are not in this list.
+        """
         with self._lock:
-            cursor = self._conn.execute("DELETE FROM scores WHERE missing = 1")
+            rows = self._conn.execute(
+                "SELECT id, path FROM scores WHERE missing = 1"
+            ).fetchall()
+        return [r["id"] for r in rows if not Path(r["path"]).exists()]
+
+    def forget_missing(self) -> int:
+        """Explicit user action only - removes every missing score whose
+        file is gone (see gone_scores), with its annotations, bookmarks
+        and setlist entries. Returns how many were removed."""
+        ids = self.gone_scores()
+        with self._lock:
+            self._conn.executemany(
+                "DELETE FROM scores WHERE id = ? AND missing = 1",
+                [(score_id,) for score_id in ids],
+            )
             self._conn.commit()
-            return cursor.rowcount
+        return len(ids)
+
+    def merge_missing_duplicates(self) -> int:
+        """Fold each missing score into a live one with the same content.
+
+        Before 0.4.4, removing a library folder and adding its subfolders
+        left every file in the library twice: a new score, and the old one
+        flagged missing with the annotations on it. Each such pair becomes
+        one score again, under the live score's id and path. Returns how
+        many missing scores were merged away.
+        """
+        with self._lock:
+            conn = self._conn
+            pairs = conn.execute(
+                "SELECT m.id AS old, ("
+                "  SELECT l.id FROM scores l "
+                "  WHERE l.missing = 0 AND l.content_key = m.content_key "
+                "  ORDER BY l.last_opened IS NULL, l.last_opened DESC, l.id "
+                "  LIMIT 1) AS new "
+                "FROM scores m "
+                "WHERE m.missing = 1 AND m.content_key IS NOT NULL ORDER BY m.id"
+            ).fetchall()
+            merged = 0
+            for pair in pairs:
+                if pair["new"] is not None:
+                    self._merge_score(pair["old"], pair["new"])
+                    merged += 1
+            conn.commit()
+            return merged
+
+    def _merge_score(self, old_id: int, new_id: int) -> None:
+        """Move everything the user made on one score to another, then
+        delete the first. What the target already has of its own wins;
+        drawings and jump links are kept from both."""
+        conn = self._conn
+        old = conn.execute("SELECT * FROM scores WHERE id = ?", (old_id,)).fetchone()
+        new = conn.execute("SELECT * FROM scores WHERE id = ?", (new_id,)).fetchone()
+
+        updates: dict[str, object] = {}
+        if new["last_opened"] is None and old["last_opened"] is not None:
+            for name in ("last_opened", "last_page", "last_offset"):
+                updates[name] = old[name]
+        if old["night_mode"] and not new["night_mode"]:
+            updates["night_mode"] = 1
+        if old["rotation"] and not new["rotation"]:
+            updates["rotation"] = old["rotation"]
+        if new["crop_x0"] is None and old["crop_x0"] is not None:
+            for name in ("crop_x0", "crop_y0", "crop_x1", "crop_y1", "crop_auto"):
+                updates[name] = old[name]
+        for name in ("fit_mode", "spread_override"):
+            if new[name] is None and old[name] is not None:
+                updates[name] = old[name]
+        for name in ("title", "composer"):
+            if old[f"{name}_locked"] and not new[f"{name}_locked"]:
+                updates[name] = old[name]
+                updates[f"{name}_locked"] = 1
+        if updates:
+            assignments = ", ".join(f"{name} = ?" for name in updates)
+            conn.execute(
+                f"UPDATE scores SET {assignments} WHERE id = ?",
+                (*updates.values(), new_id),
+            )
+
+        # Drawings, symbols and jump links: both sets stay.
+        conn.execute(
+            "UPDATE annotations SET score_id = ? WHERE score_id = ?",
+            (new_id, old_id),
+        )
+        # Bookmarks too, except one the target has under the same name
+        # on the same page.
+        conn.execute(
+            "UPDATE bookmarks SET score_id = ? WHERE score_id = ? "
+            "AND NOT EXISTS (SELECT 1 FROM bookmarks b WHERE b.score_id = ? "
+            "AND b.name = bookmarks.name AND b.page = bookmarks.page)",
+            (new_id, old_id, new_id),
+        )
+        has_tags = conn.execute(
+            "SELECT 1 FROM score_tags WHERE score_id = ? LIMIT 1", (new_id,)
+        ).fetchone()
+        if not has_tags:
+            conn.execute(
+                "UPDATE score_tags SET score_id = ? WHERE score_id = ?",
+                (new_id, old_id),
+            )
+        # A setlist keeps its place for the score, unless the live score
+        # was added to that setlist as well.
+        conn.execute(
+            "UPDATE setlist_items SET score_id = ? WHERE score_id = ? "
+            "AND setlist_id NOT IN "
+            "(SELECT setlist_id FROM setlist_items WHERE score_id = ?)",
+            (new_id, old_id, new_id),
+        )
+        # Whatever is left on the old row goes with it.
+        conn.execute("DELETE FROM scores WHERE id = ?", (old_id,))
 
     # ------------------------------------------------------------------ tags
 

@@ -189,7 +189,7 @@ class LibraryPage(Adw.NavigationPage):
         # Only in the Missing Files view: clears them all in one go.
         self.forget_missing_button = Gtk.Button(label="Remove All…")
         self.forget_missing_button.set_tooltip_text(
-            "Remove every missing score from the library"
+            "Remove the missing scores whose file no longer exists"
         )
         self.forget_missing_button.set_visible(False)
         self.forget_missing_button.connect("clicked", self._on_forget_missing)
@@ -553,20 +553,29 @@ class LibraryPage(Adw.NavigationPage):
             self.reload()
 
     def _on_forget_missing(self, _button) -> None:
-        count = sum(1 for score in self.ctx.db.all_scores() if score.missing)
+        missing = sum(1 for score in self.ctx.db.all_scores() if score.missing)
+        count = len(self.ctx.db.gone_scores())
+        kept = missing - count
         if not count:
+            if kept:
+                self.ctx.toast(
+                    "Nothing to remove: the files of these scores still exist"
+                )
             return
-        scores = "1 missing score" if count == 1 else f"{count} missing scores"
-        dialog = Adw.AlertDialog(
-            heading="Remove All Missing Scores?",
-            body=(
-                f"{scores} will be forgotten, along with their annotations, "
-                "bookmarks, tags, crop and reading position, and taken out "
-                "of any setlist. No file is touched."
-            ),
+        scores = "1 score" if count == 1 else f"{count} scores"
+        body = (
+            f"{scores} whose file no longer exists will be forgotten, along "
+            "with their annotations, bookmarks, tags, crop and reading "
+            "position, and taken out of any setlist. No file is touched."
         )
+        if kept:
+            others = "1 other score is" if kept == 1 else f"{kept} other scores are"
+            body += (
+                f"\n\n{others} kept, because the file can still be opened."
+            )
+        dialog = Adw.AlertDialog(heading="Remove Missing Scores?", body=body)
         dialog.add_response("cancel", "Cancel")
-        dialog.add_response("remove", "Remove All")
+        dialog.add_response("remove", "Remove")
         dialog.set_response_appearance("remove", Adw.ResponseAppearance.DESTRUCTIVE)
         dialog.connect("response", self._on_forget_missing_response)
         dialog.present(self)
@@ -634,6 +643,11 @@ class LibraryPage(Adw.NavigationPage):
             parts.append(f"{result.updated} updated")
         if result.missing:
             parts.append(f"{result.missing} now missing")
+        if result.merged:
+            parts.append(
+                "1 duplicate merged" if result.merged == 1
+                else f"{result.merged} duplicates merged"
+            )
         if result.unreadable:
             parts.append(f"{len(result.unreadable)} unreadable")
         if not parts and self._unreachable:
