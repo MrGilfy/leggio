@@ -31,7 +31,7 @@
     <p>What it does:</p>
     <ul>
       <li>Cuts off the white margins, so the notes fill the screen</li>
-      <li>Turn pages by tap, swipe, keyboard or Bluetooth page-turner pedal, a whole page or half a page at a time to see what is coming next</li>
+      <li>Turn pages by tap, swipe, keyboard or Bluetooth pedal, also half a page at a time</li>
       <li>Two pages side by side on a wide screen, one page on a tall one</li>
       <li>Add jump links to a D.S., D.C. or To Coda, then follow them with one tap</li>
       <li>Bookmarks and a page overview, for finding your way in long scores</li>
@@ -114,6 +114,19 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.4.4" date="2026-11-10">
+      <description>
+        <p>Fixes for setlists, landscape scores and duplicate missing files.</p>
+        <ul>
+          <li>Setlists no longer skip the first page of a score in the two-page view</li>
+          <li>Landscape scores are shown one page at a time instead of two small pages side by side</li>
+          <li>Removing a library folder and adding its subfolders no longer leaves every score twice, and existing duplicates of missing scores are merged automatically, keeping annotations and bookmarks</li>
+          <li>A new button in Missing Files removes all scores whose files were deleted</li>
+          <li>F11 shows the viewer in a normal window instead of fullscreen</li>
+          <li>The store listing has a new summary and new colours</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.3" date="2026-11-06">
       <description>
         <p>An updated store listing.</p>
