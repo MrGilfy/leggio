@@ -20,6 +20,7 @@ pytest.importorskip("gi")
 from leggio import sandbox  # noqa: E402
 from leggio.config import Config  # noqa: E402
 from leggio.db import Database  # noqa: E402
+from leggio.models import Annotation, Bookmark  # noqa: E402
 from leggio.scanner import (  # noqa: E402
     Scanner,
     find_same_file,
@@ -178,3 +179,97 @@ def test_in_flatpak(monkeypatch, tmp_path):
     assert not sandbox.in_flatpak()
     (tmp_path / ".flatpak-info").write_text("[Application]\n")
     assert sandbox.in_flatpak()
+
+
+# ------------------------------------------- issue #19: folder, then subfolders
+
+def portal(tmp_path, doc_id: str, folder: Path) -> Path:
+    """A folder as the document portal hands it out: the same files under
+    a path of its own, which keeps working after the folder is removed
+    from the library."""
+    link = tmp_path / "doc" / doc_id / folder.name
+    link.parent.mkdir(parents=True)
+    link.symlink_to(folder, target_is_directory=True)
+    return link
+
+
+@pytest.fixture
+def nested(tmp_path):
+    root = tmp_path / "host" / "leggio_test"
+    make_pdf(root / "one" / "chopin.pdf", "chopin")
+    make_pdf(root / "one" / "clair.pdf", "clair")
+    make_pdf(root / "two" / "elise.pdf", "elise")
+    make_pdf(root / "two" / "gymnopedie.pdf", "gymnopedie")
+    return root
+
+
+def test_subfolders_added_after_removing_their_parent_relink(db, nested, tmp_path):
+    top = portal(tmp_path, "aaa", nested)
+    scan(db, top)
+    before = {Path(s.path).name: s.id for s in db.all_scores()}
+    db.update_score(before["chopin.pdf"], last_page=2)
+    db.add_bookmark(Bookmark(0, before["chopin.pdf"], "Trio", page=1))
+    db.add_annotation(Annotation(
+        0, before["elise.pdf"], 0, Annotation.INK, "#000000", 0.002,
+        {"points": [[0.1, 0.1], [0.2, 0.2]]},
+    ))
+
+    # The parent is removed from the library, then its subfolders are
+    # added one at a time. The parent's portal path still opens.
+    one = portal(tmp_path, "bbb", nested / "one")
+    first = scan(db, one)
+    two = portal(tmp_path, "ccc", nested / "two")
+    second = scan(db, one, two)
+
+    assert (first.added, second.added) == (0, 0)
+    after = {Path(s.path).name: s for s in db.all_scores()}
+    assert {name: s.id for name, s in after.items()} == before
+    assert not any(s.missing for s in after.values())
+    assert is_under(after["chopin.pdf"].path, one)
+    assert is_under(after["elise.pdf"].path, two)
+    assert after["chopin.pdf"].last_page == 2
+    assert [b.name for b in db.bookmarks_for(before["chopin.pdf"])] == ["Trio"]
+    assert len(db.annotations_for(before["elise.pdf"], 0)) == 1
+
+
+def test_scores_already_flagged_missing_relink_to_a_subfolder(db, nested, tmp_path):
+    """With another library folder left, removing the parent flags its
+    scores as missing before the subfolders are added."""
+    other = tmp_path / "Other"
+    make_pdf(other / "Sonata.pdf", "Sonata")
+    top = portal(tmp_path, "aaa", nested)
+    scan(db, top, other)
+    before = {Path(s.path).name: s.id for s in db.all_scores()}
+
+    assert scan(db, other).missing == 4
+    one = portal(tmp_path, "bbb", nested / "one")
+    two = portal(tmp_path, "ccc", nested / "two")
+    result = scan(db, other, one, two)
+
+    assert result.added == 0
+    after = {Path(s.path).name: s for s in db.all_scores()}
+    assert {name: s.id for name, s in after.items()} == before
+    assert not any(s.missing for s in after.values())
+
+
+def test_the_same_file_in_two_library_folders_stays_two_scores(db, tmp_path):
+    a = make_pdf(tmp_path / "A" / "Sonata.pdf", "Sonata").parent
+    b = tmp_path / "B"
+    b.mkdir()
+    shutil.copy(a / "Sonata.pdf", b / "Sonata.pdf")
+    scan(db, a)
+    assert scan(db, a, b).added == 1
+    assert len(db.all_scores()) == 2
+
+
+def test_forget_missing_removes_only_missing_scores(db, music):
+    scan(db, music)
+    ids = {Path(s.path).name: s.id for s in db.all_scores()}
+    db.add_bookmark(Bookmark(0, ids["Sonata.pdf"], "Trio", page=0))
+    (music / "Sonata.pdf").unlink()
+    scan(db, music)
+
+    assert db.forget_missing() == 1
+    assert [Path(s.path).name for s in db.all_scores()] == ["Aria.pdf"]
+    assert db.bookmarks_for(ids["Sonata.pdf"]) == []
+    assert db.forget_missing() == 0
