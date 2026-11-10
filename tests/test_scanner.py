@@ -20,10 +20,12 @@ pytest.importorskip("gi")
 from leggio import sandbox  # noqa: E402
 from leggio.config import Config  # noqa: E402
 from leggio.db import Database  # noqa: E402
-from leggio.models import Annotation, Bookmark  # noqa: E402
+from leggio.models import Annotation, Bookmark, CropRect  # noqa: E402
+from leggio.pdf import content_key  # noqa: E402
 from leggio.scanner import (  # noqa: E402
     Scanner,
     find_same_file,
+    index_file,
     is_reachable,
     is_under,
 )
@@ -262,14 +264,187 @@ def test_the_same_file_in_two_library_folders_stays_two_scores(db, tmp_path):
     assert len(db.all_scores()) == 2
 
 
-def test_forget_missing_removes_only_missing_scores(db, music):
-    scan(db, music)
+def test_forget_missing_removes_only_scores_whose_file_is_gone(db, music, tmp_path):
+    outside = make_pdf(tmp_path / "Downloads" / "Etude.pdf", "Etude")
+    assert index_file(db, outside) is not None      # opened from outside
+    scan(db, music, outside.parent)
     ids = {Path(s.path).name: s.id for s in db.all_scores()}
     db.add_bookmark(Bookmark(0, ids["Sonata.pdf"], "Trio", page=0))
-    (music / "Sonata.pdf").unlink()
-    scan(db, music)
+    db.add_bookmark(Bookmark(0, ids["Etude.pdf"], "Coda", page=0))
 
+    (music / "Sonata.pdf").unlink()
+    result = scan(db, music)
+
+    # Both are flagged, but only one file is really gone.
+    assert result.missing == 2
+    assert db.gone_scores() == [ids["Sonata.pdf"]]
     assert db.forget_missing() == 1
-    assert [Path(s.path).name for s in db.all_scores()] == ["Aria.pdf"]
+    left = {Path(s.path).name: s for s in db.all_scores()}
+    assert set(left) == {"Aria.pdf", "Etude.pdf"}
+    assert left["Etude.pdf"].missing
     assert db.bookmarks_for(ids["Sonata.pdf"]) == []
+    assert [b.name for b in db.bookmarks_for(ids["Etude.pdf"])] == ["Coda"]
     assert db.forget_missing() == 0
+    assert len(db.all_scores()) == 2
+
+
+def test_forget_missing_keeps_scores_that_are_not_missing(db, music):
+    scan(db, music)
+    # Deleted since the last scan, so not flagged yet: not this button's job.
+    (music / "Sonata.pdf").unlink()
+    assert db.gone_scores() == []
+    assert db.forget_missing() == 0
+    assert len(db.all_scores()) == 2
+
+
+# ----------------------------------- duplicates left behind by issue #19
+
+def stroke(score_id, page=0, x=0.1):
+    return Annotation(
+        0, score_id, page, Annotation.INK, "#000000", 0.002,
+        {"points": [[x, 0.1], [x + 0.1, 0.2]]},
+    )
+
+
+def jump(score_id, page=0):
+    return Annotation(
+        0, score_id, page, Annotation.LINK, "#1c71d8", 0.0,
+        {"x": 0.5, "y": 0.9, "target_page": 0, "tx": 0.1, "ty": 0.1},
+    )
+
+
+@pytest.fixture
+def duplicated(db, nested, tmp_path):
+    """A library as 0.4.3 left it: every file once as a missing score at
+    its old portal path, which still opens, and once as a live score.
+    Returns (old ids, new ids, the library folders), ids by file name."""
+    top = portal(tmp_path, "aaa", nested)
+    scan(db, top)
+    old = {Path(s.path).name: s.id for s in db.all_scores()}
+    one = portal(tmp_path, "bbb", nested / "one")
+    two = portal(tmp_path, "ccc", nested / "two")
+    new = {}
+    for folder in (one, two):
+        for path in sorted(folder.iterdir()):
+            stat = path.stat()
+            # Without library_roots: the scan as it was before the fix.
+            new[path.name], is_new = db.sync_from_scan(
+                str(path), default_title=path.stem, composer=None,
+                page_count=1, file_size=stat.st_size,
+                file_mtime=stat.st_mtime, content_key=content_key(path),
+            )
+            assert is_new
+    assert db.mark_missing_except(new.values()) == 4
+    assert len(db.all_scores()) == 8
+    return old, new, (one, two)
+
+
+def test_duplicate_pairs_are_merged_on_the_next_scan(db, duplicated):
+    old, new, folders = duplicated
+    chopin, elise = old["chopin.pdf"], old["elise.pdf"]
+    db.add_annotation(stroke(chopin, page=0))
+    db.add_annotation(jump(chopin, page=0))
+    db.add_bookmark(Bookmark(0, chopin, "Trio", page=0))
+    db.update_score(chopin, last_page=3, last_offset=0.5, last_opened=100.0,
+                    night_mode=True, rotation=90)
+    db.set_crop(chopin, CropRect(0.1, 0.1, 0.9, 0.9), auto=False)
+    db.set_tags(chopin, ["Piano", "Romantic"])
+    setlist = db.create_setlist("Gig")
+    db.add_to_setlist(setlist, old["clair.pdf"])
+    db.add_to_setlist(setlist, chopin)
+    db.add_to_setlist(setlist, elise)
+
+    result = scan(db, *folders)
+
+    assert result.merged == 4
+    scores = {Path(s.path).name: s for s in db.all_scores()}
+    assert {name: s.id for name, s in scores.items()} == new
+    assert not any(s.missing for s in scores.values())
+
+    live = scores["chopin.pdf"]
+    kinds = sorted(a.kind for a in db.annotations_for(live.id, 0))
+    assert kinds == [Annotation.INK, Annotation.LINK]
+    assert len(db.links_for(live.id)) == 1
+    assert [b.name for b in db.bookmarks_for(live.id)] == ["Trio"]
+    assert (live.last_page, live.last_offset, live.last_opened) == (3, 0.5, 100.0)
+    assert live.night_mode and live.rotation == 90
+    assert live.crop == CropRect(0.1, 0.1, 0.9, 0.9) and not live.crop_auto
+    assert live.tags == ("Piano", "Romantic")
+    # The setlist still plays the same three pieces in the same order.
+    assert [s.id for s in db.setlist_scores(setlist)] == [
+        new["clair.pdf"], new["chopin.pdf"], new["elise.pdf"],
+    ]
+    # Nothing is left behind under the old ids.
+    assert db.annotations_for(chopin, 0) == []
+    assert db.bookmarks_for(chopin) == []
+
+    # Once: a second scan finds nothing more to merge.
+    assert scan(db, *folders).merged == 0
+    assert len(db.all_scores()) == 4
+
+
+def test_merging_keeps_the_annotations_of_both_scores(db, duplicated):
+    old, new, folders = duplicated
+    db.add_annotation(stroke(old["chopin.pdf"], x=0.1))
+    db.add_annotation(stroke(old["chopin.pdf"], page=1, x=0.3))
+    db.add_annotation(stroke(new["chopin.pdf"], x=0.6))
+    db.add_annotation(jump(new["chopin.pdf"]))
+
+    scan(db, *folders)
+
+    live = new["chopin.pdf"]
+    first_xs = sorted(a.points[0][0] for a in db.annotations_for(live, 0)
+                      if a.kind == Annotation.INK)
+    assert first_xs == [0.1, 0.6]
+    assert len(db.annotations_for(live, 1)) == 1
+    assert len(db.links_for(live)) == 1
+
+
+def test_merging_leaves_what_the_live_score_has_of_its_own(db, duplicated):
+    old, new, folders = duplicated
+    gone, live = old["elise.pdf"], new["elise.pdf"]
+    db.update_score(gone, last_page=4, last_opened=50.0, title="Old title",
+                    title_locked=True)
+    db.set_tags(gone, ["Old"])
+    db.add_bookmark(Bookmark(0, gone, "Coda", page=0))
+    db.add_bookmark(Bookmark(0, gone, "Intro", page=0))
+    db.update_score(live, last_page=1, last_opened=200.0, title="My title",
+                    title_locked=True)
+    db.set_tags(live, ["New"])
+    db.add_bookmark(Bookmark(0, live, "Coda", page=0))
+    setlist = db.create_setlist("Gig")
+    db.add_to_setlist(setlist, gone)
+    db.add_to_setlist(setlist, live)        # added again by hand since
+
+    scan(db, *folders)
+
+    score = db.get_score(live)
+    assert (score.last_page, score.last_opened) == (1, 200.0)
+    assert score.title == "My title"
+    assert score.tags == ("New",)
+    assert not score.night_mode
+    assert sorted(b.name for b in db.bookmarks_for(live)) == ["Coda", "Intro"]
+    assert [s.id for s in db.setlist_scores(setlist)] == [live]
+
+
+def test_a_missing_score_without_a_live_twin_is_left_alone(db, music):
+    scan(db, music)
+    ids = {Path(s.path).name: s.id for s in db.all_scores()}
+    db.add_annotation(stroke(ids["Sonata.pdf"]))
+    (music / "Sonata.pdf").unlink()
+
+    result = scan(db, music)
+
+    assert (result.missing, result.merged) == (1, 0)
+    assert db.get_score(ids["Sonata.pdf"]).missing
+    assert len(db.annotations_for(ids["Sonata.pdf"], 0)) == 1
+
+
+def test_two_live_copies_are_not_merged(db, tmp_path):
+    a = make_pdf(tmp_path / "A" / "Sonata.pdf", "Sonata").parent
+    b = tmp_path / "B"
+    b.mkdir()
+    shutil.copy(a / "Sonata.pdf", b / "Sonata.pdf")
+    assert scan(db, a, b).merged == 0
+    assert scan(db, a, b).merged == 0
+    assert len(db.all_scores()) == 2

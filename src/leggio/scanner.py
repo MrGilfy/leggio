@@ -29,6 +29,8 @@ class ScanResult:
     added: int = 0
     updated: int = 0
     missing: int = 0
+    # Missing scores folded into a live score with the same content.
+    merged: int = 0
     unreadable: list[str] = field(default_factory=list)
     # Library folders that could not be opened, each with the number of
     # scores the library already holds from it. Those scores are kept as
@@ -249,4 +251,5 @@ class Scanner:
         if not result.cancelled:
             # Anything not seen this pass is flagged, never deleted.
             result.missing = self.db.mark_missing_except(seen_ids)
+            result.merged = self.db.merge_missing_duplicates()
         return result
