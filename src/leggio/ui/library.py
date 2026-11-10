@@ -186,10 +186,11 @@ class LibraryPage(Adw.NavigationPage):
         header.pack_end(self.sort_reverse)
         header.pack_end(self.sort_dropdown)
 
-        # Only in the Missing Files view: clears them all in one go.
-        self.forget_missing_button = Gtk.Button(label="Remove All…")
+        # Only in the Missing Files view: clears, in one go, the scores
+        # whose file was deleted.
+        self.forget_missing_button = Gtk.Button(label="Remove Deleted Files…")
         self.forget_missing_button.set_tooltip_text(
-            "Remove the missing scores whose file no longer exists"
+            "Remove the scores whose file was deleted from the library"
         )
         self.forget_missing_button.set_visible(False)
         self.forget_missing_button.connect("clicked", self._on_forget_missing)
@@ -559,21 +560,22 @@ class LibraryPage(Adw.NavigationPage):
         if not count:
             if kept:
                 self.ctx.toast(
-                    "Nothing to remove: the files of these scores still exist"
+                    "Nothing to remove: none of these files was deleted"
                 )
             return
         scores = "1 score" if count == 1 else f"{count} scores"
         body = (
-            f"{scores} whose file no longer exists will be forgotten, along "
-            "with their annotations, bookmarks, tags, crop and reading "
-            "position, and taken out of any setlist. No file is touched."
+            f"{scores} whose file was deleted will be removed from the "
+            "library, along with their annotations, bookmarks, tags, crop "
+            "and reading position, and taken out of any setlist. No file "
+            "is touched."
         )
         if kept:
             others = "1 other score is" if kept == 1 else f"{kept} other scores are"
             body += (
-                f"\n\n{others} kept, because the file can still be opened."
+                f"\n\n{others} kept, because the file still exists."
             )
-        dialog = Adw.AlertDialog(heading="Remove Missing Scores?", body=body)
+        dialog = Adw.AlertDialog(heading="Remove Deleted Files?", body=body)
         dialog.add_response("cancel", "Cancel")
         dialog.add_response("remove", "Remove")
         dialog.set_response_appearance("remove", Adw.ResponseAppearance.DESTRUCTIVE)
@@ -585,7 +587,10 @@ class LibraryPage(Adw.NavigationPage):
             return
         count = self.ctx.db.forget_missing()
         self.reload()
-        scores = "1 missing score" if count == 1 else f"{count} missing scores"
+        scores = (
+            "1 score whose file was deleted" if count == 1
+            else f"{count} scores whose files were deleted"
+        )
         self.ctx.toast(f"Removed {scores}")
 
     def _on_score_saved(self, score_id: int) -> None:
