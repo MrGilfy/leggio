@@ -238,6 +238,7 @@ class Scanner:
                 file_size=stat.st_size,
                 file_mtime=stat.st_mtime,
                 content_key=content_key(path),
+                library_roots=directories,
             )
             seen_ids.append(score_id)
             if is_new:

@@ -186,6 +186,15 @@ class LibraryPage(Adw.NavigationPage):
         header.pack_end(self.sort_reverse)
         header.pack_end(self.sort_dropdown)
 
+        # Only in the Missing Files view: clears them all in one go.
+        self.forget_missing_button = Gtk.Button(label="Remove All…")
+        self.forget_missing_button.set_tooltip_text(
+            "Remove every missing score from the library"
+        )
+        self.forget_missing_button.set_visible(False)
+        self.forget_missing_button.connect("clicked", self._on_forget_missing)
+        header.pack_end(self.forget_missing_button)
+
         # Says so when a library folder can't be opened, rather than letting
         # its scores quietly turn into "missing" ones.
         self.folder_banner = Adw.Banner()
@@ -291,6 +300,7 @@ class LibraryPage(Adw.NavigationPage):
         self.store.set_sort(key, default_reverse != self.sort_reverse.get_active())
 
     def _on_view_selected(self, _listbox, row: Optional[Gtk.ListBoxRow]) -> None:
+        self.forget_missing_button.set_visible(row is self.missing_row)
         if row is None:
             return
         self.tags_list.select_row(None)
@@ -541,6 +551,33 @@ class LibraryPage(Adw.NavigationPage):
         if response == "remove":
             self.ctx.db.forget_score(score_id)
             self.reload()
+
+    def _on_forget_missing(self, _button) -> None:
+        count = sum(1 for score in self.ctx.db.all_scores() if score.missing)
+        if not count:
+            return
+        scores = "1 missing score" if count == 1 else f"{count} missing scores"
+        dialog = Adw.AlertDialog(
+            heading="Remove All Missing Scores?",
+            body=(
+                f"{scores} will be forgotten, along with their annotations, "
+                "bookmarks, tags, crop and reading position, and taken out "
+                "of any setlist. No file is touched."
+            ),
+        )
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("remove", "Remove All")
+        dialog.set_response_appearance("remove", Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.connect("response", self._on_forget_missing_response)
+        dialog.present(self)
+
+    def _on_forget_missing_response(self, _dialog, response: str) -> None:
+        if response != "remove":
+            return
+        count = self.ctx.db.forget_missing()
+        self.reload()
+        scores = "1 missing score" if count == 1 else f"{count} missing scores"
+        self.ctx.toast(f"Removed {scores}")
 
     def _on_score_saved(self, score_id: int) -> None:
         score = self.ctx.db.get_score(score_id)

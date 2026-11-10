@@ -219,12 +219,20 @@ class Database:
         file_size: int,
         file_mtime: float,
         content_key: Optional[str],
+        library_roots: Optional[Iterable[Path]] = None,
     ) -> tuple[int, bool]:
         """Insert, update or relink one scanned file.
 
         Returns (score_id, is_new). User-edited fields are never clobbered:
         title and composer are only refreshed while their *_locked flag is 0.
+
+        `library_roots` are the folders a library scan covers. A score
+        with the same content whose path is in none of them is relinked
+        even though its old path still opens; see _relinkable().
         """
+        roots = None
+        if library_roots is not None:
+            roots = [str(root).rstrip("/") + "/" for root in library_roots]
         with self._lock:
             conn = self._conn
             row = conn.execute(
@@ -233,15 +241,16 @@ class Database:
 
             if row is None and content_key:
                 # A moved file keeps its row: relink one with the same
-                # fingerprint whose old path is gone. Checked on disk, as
-                # `missing` is only set after the whole scan.
+                # fingerprint whose old path is gone, or no longer in the
+                # library. Checked on disk, as `missing` is only set
+                # after the whole scan.
                 candidates = conn.execute(
                     "SELECT * FROM scores WHERE content_key = ? "
                     "ORDER BY missing DESC, last_opened DESC",
                     (content_key,),
                 ).fetchall()
                 for candidate in candidates:
-                    if not Path(candidate["path"]).exists():
+                    if self._relinkable(candidate["path"], roots):
                         row = candidate
                         log.info("relinking %r -> %r", row["path"], path)
                         conn.execute(
@@ -280,6 +289,25 @@ class Database:
             conn.commit()
             return int(row["id"]), False
 
+    @staticmethod
+    def _relinkable(old_path: str, roots: Optional[list[str]]) -> bool:
+        """Whether a score may move to a new path with the same content.
+
+        Yes when its file is gone. Also yes, during a library scan, when
+        its path lies outside every library folder: the scan is about to
+        flag it missing anyway. That is the case inside a Flatpak after a
+        folder was removed and one of its subfolders added. Each folder
+        picked gets a document portal path of its own, and the removed
+        folder's path keeps working, so the file looks like a second copy
+        when it is the same one. Two copies that are both inside library
+        folders stay two scores.
+        """
+        if not Path(old_path).exists():
+            return True
+        return roots is not None and not any(
+            old_path.startswith(root) for root in roots
+        )
+
     def mark_missing_except(self, seen_ids: Iterable[int]) -> int:
         """Flag every score not seen by this scan. Rows are kept forever;
         the user's metadata outlives the file."""
@@ -304,6 +332,15 @@ class Database:
         with self._lock:
             self._conn.execute("DELETE FROM scores WHERE id = ?", (score_id,))
             self._conn.commit()
+
+    def forget_missing(self) -> int:
+        """Explicit user action only - removes every score flagged missing,
+        with its annotations, bookmarks and setlist entries. Returns how
+        many were removed."""
+        with self._lock:
+            cursor = self._conn.execute("DELETE FROM scores WHERE missing = 1")
+            self._conn.commit()
+            return cursor.rowcount
 
     # ------------------------------------------------------------------ tags
 
