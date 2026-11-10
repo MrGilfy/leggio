@@ -9,7 +9,7 @@
   </replaces>
 
   <name>Leggio</name>
-  <summary>Read sheet music from a screen</summary>
+  <summary>Your digital music stand</summary>
 
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
@@ -31,8 +31,7 @@
     <p>What it does:</p>
     <ul>
       <li>Cuts off the white margins, so the notes fill the screen</li>
-      <li>Half-page turns, so you can see what is coming next</li>
-      <li>Turn pages by tap, swipe, keyboard or Bluetooth page-turner pedal</li>
+      <li>Turn pages by tap, swipe, keyboard or Bluetooth page-turner pedal, a whole page or half a page at a time to see what is coming next</li>
       <li>Two pages side by side on a wide screen, one page on a tall one</li>
       <li>Add jump links to a D.S., D.C. or To Coda, then follow them with one tap</li>
       <li>Bookmarks and a page overview, for finding your way in long scores</li>
@@ -40,8 +39,7 @@
       <li>Export a score or a setlist as a PDF with your annotations drawn in</li>
       <li>Night mode turns pages white-on-black for dark stages</li>
       <li>A setlist reads as one long document, several scores in a row</li>
-      <li>Remembers where you stopped in each score</li>
-      <li>Keeps the screen from going to sleep while you play</li>
+      <li>Remembers where you stopped in each score, and keeps the screen from going to sleep while you play</li>
     </ul>
     <p>
       Your PDF files are never changed. Everything Leggio saves is kept in
@@ -70,10 +68,12 @@
   <url type="bugtracker">https://github.com/MrGilfy/leggio/issues</url>
   <url type="vcs-browser">https://github.com/MrGilfy/leggio</url>
 
-  <!-- Contrast with the icon's #1c71d8 (WCAG): 4.2:1 light, 3.1:1 dark -->
+  <!-- Amber, the complement of the icon's blue #1c71d8 (hue 40 against
+       213). WCAG contrast with the blue: 3.4:1 light, 2.3:1 dark; with
+       the icon's white page: 1.3:1 light, 9.5:1 dark. -->
   <branding>
-    <color type="primary" scheme_preference="light">#f6efdc</color>
-    <color type="primary" scheme_preference="dark">#2b2724</color>
+    <color type="primary" scheme_preference="light">#ffd27a</color>
+    <color type="primary" scheme_preference="dark">#4f3a14</color>
   </branding>
 
   <categories>
