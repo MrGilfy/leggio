@@ -11,6 +11,28 @@ from __future__ import annotations
 
 from typing import Sequence
 
+# In the automatic mode a spread is used while its pages are drawn at
+# least this large compared with one page on its own. Two upright pages
+# on a wide screen lose nothing, or a few percent on a 4:3 one; two
+# landscape pages would each shrink to about half.
+SPREAD_MIN_SCALE = 0.75
+
+
+def spread_suits(screen: tuple[float, float], page: tuple[float, float],
+                 gap: float = 0.0) -> bool:
+    """Whether a wide screen should show two of these pages side by side.
+
+    `page` is the page as drawn, cropped and rotated; only its proportions
+    matter. Never on an upright screen.
+    """
+    screen_w, screen_h = screen
+    page_w, page_h = page
+    if screen_w <= screen_h or min(screen_h, page_w, page_h) <= 0:
+        return False
+    single = min(screen_h / page_h, screen_w / page_w)
+    double = min(screen_h / page_h, (screen_w - gap) / 2 / page_w)
+    return double >= SPREAD_MIN_SCALE * single
+
 
 def last_screen(count: int, step: int) -> int:
     """The first page of a score's last screen."""

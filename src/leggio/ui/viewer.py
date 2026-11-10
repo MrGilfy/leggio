@@ -301,7 +301,11 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
             return True
         if self.spread_mode == "single":
             return False
-        return width > height
+        # Automatic: only when the pages stay readable, so not for
+        # landscape pages on anything but a very wide screen.
+        return paging.spread_suits(
+            (width, height), self._content_size(self.page), GAP
+        )
 
     def _half_active(self, width: float, height: float) -> bool:
         # A spread already shows two pages; halving it as well is nonsense.
@@ -527,6 +531,13 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
             return False
         if index != self.index:
             self._switch_score(index)
+            if delta < 0:
+                # The previous score may be laid out differently from the
+                # one just left: upright pages in a spread before a
+                # landscape score shown a page at a time.
+                self.page = 0
+                step = 2 if self._spread_active(width, height) else 1
+                page = paging.last_screen(counts[index], step)
         self.page = page
         return True
 
@@ -563,6 +574,7 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
         self.zoom = 1.0
         self._ensure_info(index)
         self._ensure_info(index + 1)
+        self._ensure_info(index - 1)
         self.ctx.db.update_score(self.score.id, last_opened=time.time())
 
     def _device_size(self) -> tuple[float, float]:
