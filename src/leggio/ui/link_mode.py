@@ -260,8 +260,11 @@ class LinkModeMixin:
         Back to where it started. Without a spot, go to the top of the page.
         `index` switches score in a setlist."""
         before = (self.index, self.page, self.offset)
+        current_page = self.page
         if index is not None and index != self.index and 0 <= index < len(self.scores):
             self._switch_score(index)
+            # Spreads are paired within a score, never across two of them.
+            current_page = 0
         if tx is None or ty is None:
             tx, ty = links.top_point(0.0, self.rotation, self.crop)
 
@@ -274,7 +277,7 @@ class LinkModeMixin:
 
         landed, offset = links.land(
             page, tx, ty, view, rotation=self.rotation, crop=self.crop,
-            current_page=self.page, margin=margin,
+            current_page=current_page, margin=margin,
         )
         count = self._page_count()
         if count:
