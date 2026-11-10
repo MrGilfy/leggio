@@ -23,7 +23,7 @@ gi.require_version("Adw", "1")
 import cairo  # noqa: E402
 from gi.repository import Adw, Gdk, GLib, Gtk  # noqa: E402
 
-from .. import geometry
+from .. import geometry, paging
 from ..models import CropRect, Score
 from ..render import PRIORITY_PREFETCH, make_key
 from .annotate_mode import AnnotateModeMixin
@@ -249,9 +249,11 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
         score = self.scores[index if index is not None else self.index]
         return self.infos.get(score.path)
 
-    def _page_count(self) -> int:
-        info = self._info()
-        return info.page_count if info else self.score.page_count
+    def _page_count(self, index: Optional[int] = None) -> int:
+        info = self._info(index)
+        if info:
+            return info.page_count
+        return self.scores[index if index is not None else self.index].page_count
 
     def _ensure_info(self, index: int) -> None:
         if not (0 <= index < len(self.scores)):
@@ -505,48 +507,45 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
         if self._half_active(width, height):
             self._advance(delta * 0.5)
         else:
-            step = 2 if self._spread_active(width, height) else 1
-            self.page += delta * step
+            self._step(delta)
             self.offset = 0.0
-            self._settle_page()
         self.pan_x = 0.0
         self.back_state.turned()
         self.area.queue_draw()
         self._sync_controls()
         self._schedule_save()
 
-    def _advance(self, amount: float) -> None:
-        self.offset += amount
-        while self.offset >= 1.0:
-            self.offset -= 1.0
-            self.page += 1
-        while self.offset < 0.0:
-            self.offset += 1.0
-            self.page -= 1
-        self._settle_page()
+    def _step(self, delta: int) -> bool:
+        """Move one screen forward or back, crossing into the next or the
+        previous score of a setlist. False at either end, where there is
+        nowhere to go."""
+        width, height = self._device_size()
+        step = 2 if self._spread_active(width, height) else 1
+        counts = [self._page_count(i) for i in range(len(self.scores))]
+        index, page = paging.turn(self.index, self.page, delta, step, counts)
+        if (index, page) == (self.index, self.page):
+            return False
+        if index != self.index:
+            self._switch_score(index)
+        self.page = page
+        return True
 
-    def _settle_page(self) -> None:
-        """Clamp within the score, crossing into the next one in a setlist."""
-        count = self._page_count()
-        while self.page >= count:
-            if self.index + 1 < len(self.scores):
-                overflow = self.page - count
-                self._switch_score(self.index + 1)
-                self.page = overflow
-                count = self._page_count()
-            else:
-                self.page = max(0, count - 1)
-                self.offset = min(self.offset, self._max_offset())
-                return
-        while self.page < 0:
-            if self.index > 0:
-                self._switch_score(self.index - 1)
-                count = self._page_count()
-                self.page += count
-            else:
-                self.page = 0
-                self.offset = 0.0
-                return
+    def _advance(self, amount: float) -> None:
+        offset = self.offset + amount
+        while offset >= 1.0:
+            index = self.index
+            if not self._step(1):
+                offset = self._max_offset()
+                break
+            # A new score always opens at the top of its first page.
+            offset = offset - 1.0 if index == self.index else 0.0
+        while offset < 0.0:
+            index = self.index
+            if not self._step(-1):
+                offset = 0.0
+                break
+            offset = offset + 1.0 if index == self.index else 0.0
+        self.offset = offset
 
     def _max_offset(self) -> float:
         """How far the last page may scroll before its bottom edge lifts off
