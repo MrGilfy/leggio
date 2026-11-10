@@ -218,6 +218,17 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
         self._stop_flash()
         self.close_overview()
 
+    def toggle_fullscreen(self) -> None:
+        """Leave fullscreen for a normal window, or go back. The viewer
+        opens fullscreen every time; this lasts until it is closed."""
+        window = self.get_root()
+        if window is None:
+            return
+        if window.is_fullscreen():
+            window.unfullscreen()
+        else:
+            window.fullscreen()
+
     def close_viewer(self) -> None:
         self.ctx.navigation.pop()
 
@@ -737,6 +748,10 @@ class ViewerPage(AnnotateModeMixin, CropModeMixin, LinkModeMixin,
             return False
         if state & Gdk.ModifierType.ALT_MASK:
             return False
+
+        if keyval == Gdk.KEY_F11:
+            self.toggle_fullscreen()
+            return True
 
         if self.overview_open:
             # Arrows and Enter belong to the page grid while it is open.
