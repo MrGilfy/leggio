@@ -20,6 +20,7 @@ from ..models import Score
 from ..pdf import clean_title
 from ..sandbox import display_path
 from ..scanner import is_reachable
+from .tags import TagEditor
 
 log = logging.getLogger(__name__)
 
@@ -105,9 +106,9 @@ class MetadataDialog(Adw.Dialog):
         self.composer_row.set_text(score.composer or "")
         group.add(self.composer_row)
 
-        self.tags_row = Adw.EntryRow(title="Tags (comma separated)")
-        self.tags_row.set_text(", ".join(score.tags))
-        group.add(self.tags_row)
+        all_tags_sorted = [t[0] for t in sorted(self.db.all_tags(), key=lambda x: x[1])]
+        self.tag_editor = TagEditor(list(score.tags), all_tags_sorted)
+        group.add(self.tag_editor)
 
         info = Adw.ActionRow(title="File")
         info.set_subtitle(display_path(score.path))
@@ -144,7 +145,7 @@ class MetadataDialog(Adw.Dialog):
 
         self.db.update_score(self.score.id, **fields)
 
-        tags = [t.strip() for t in self.tags_row.get_text().split(",")]
+        tags = [t.strip() for t in self.tag_editor.get_tags()]
         self.db.set_tags(self.score.id, [t for t in tags if t])
 
         self.on_saved(self.score.id)

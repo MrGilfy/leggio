@@ -154,7 +154,7 @@
   background-color: #3584e4;
 }
 
-.bookmark-chip .chip-go {
+.bookmark-chip .chip-go .tag-chip {
   border-radius: 14px 0 0 14px;
 }
 
@@ -203,4 +203,12 @@
   border-radius: 999px;
   padding: 2px 10px;
   font-weight: bold;
+}
+
+.tag-chip {
+  min-height: 36px;
+}
+
+.tag-active {
+  background-color: #3584e4;
 }
